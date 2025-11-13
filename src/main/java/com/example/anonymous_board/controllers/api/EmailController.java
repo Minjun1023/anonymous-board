@@ -1,4 +1,4 @@
-package com.example.anonymous_board.controller;
+package com.example.anonymous_board.controllers.api;
 
 import com.example.anonymous_board.dto.EmailAuthRequest;
 import com.example.anonymous_board.dto.EmailCheckRequest;
@@ -19,7 +19,7 @@ public class EmailController {
     private final EmailService emailService;
 
     /**
-     * 인증 이메일 발송을 요청합니다.
+     * 인증 이메일 발송 요청
      */
     @PostMapping("/send-verification")
     public ResponseEntity<String> sendVerificationEmail(@Valid @RequestBody EmailAuthRequest request) {
@@ -28,7 +28,7 @@ public class EmailController {
     }
 
     /**
-     * 이메일로 받은 인증 코드를 확인합니다.
+     * 이메일로 받은 인증 코드 확인
      */
     @PostMapping("/check-verification")
     public ResponseEntity<String> checkVerification(@Valid @RequestBody EmailCheckRequest request) {

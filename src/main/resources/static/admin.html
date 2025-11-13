@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .author-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .stats-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .tab-content {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">익명 게시판 관리자</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/posts">게시글 목록</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin">관리자 페이지</a>
+                    </li>
+                </ul>
+                <span class="navbar-text text-white" id="userInfo"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2>관리자 대시보드</h2>
+        
+        <!-- 탭 네비게이션 -->
+        <ul class="nav nav-tabs mt-4" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button">
+                    사용자 관리
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts" type="button">
+                    게시글 관리
+                </button>
+            </li>
+        </ul>
+
+        <!-- 탭 컨텐츠 -->
+        <div class="tab-content" id="adminTabContent">
+            <!-- 사용자 관리 탭 -->
+            <div class="tab-pane fade show active" id="users" role="tabpanel">
+                <h4 class="mt-3">전체 사용자 목록</h4>
+                <div id="usersList"></div>
+                <nav aria-label="User pagination">
+                    <ul class="pagination justify-content-center mt-4" id="usersPagination"></ul>
+                </nav>
+            </div>
+
+            <!-- 게시글 관리 탭 -->
+            <div class="tab-pane fade" id="posts" role="tabpanel">
+                <h4 class="mt-3">전체 게시글 (작성자 정보 포함)</h4>
+                <div id="postsList"></div>
+                <nav aria-label="Post pagination">
+                    <ul class="pagination justify-content-center mt-4" id="postsPagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- 사용자 상세 모달 -->
+    <div class="modal fade" id="userDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">사용자 상세 정보</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="userDetailContent">
+                    <!-- 사용자 상세 정보가 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const token = localStorage.getItem('jwtToken');
+        let currentUserPage = 0;
+        let currentPostPage = 0;
+
+        // 로그인 및 권한 체크
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/login';
+                return;
+            }
+            
+            // JWT 토큰에서 역할 확인 (간단한 디코딩)
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                document.getElementById('userInfo').textContent = payload.name + ' (' + payload.email + ')';
+                
+                // ADMIN 권한 체크
+                if (!payload.role || payload.role !== 'ROLE_ADMIN') {
+                    alert('관리자 권한이 필요합니다.');
+                    window.location.href = '/';
+                    return;
+                }
+            } catch (e) {
+                console.error('토큰 파싱 오류:', e);
+                alert('로그인 정보가 올바르지 않습니다.');
+                window.location.href = '/login';
+                return;
+            }
+
+            loadUsers(0);
+        });
+
+        // 탭 전환 이벤트
+        document.getElementById('posts-tab').addEventListener('click', function() {
+            if (document.getElementById('postsList').children.length === 0) {
+                loadPosts(0);
+            }
+        });
+
+        // 사용자 목록 로드
+        function loadUsers(page) {
+            currentUserPage = page;
+            fetch('/api/admin/users?page=' + page + '&size=10', {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            })
+            .then(response => {
+                if (response.status === 403) {
+                    alert('관리자 권한이 필요합니다.');
+                    window.location.href = '/';
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                displayUsers(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('사용자 목록을 불러오는데 실패했습니다.');
+            });
+        }
+
+        // 사용자 목록 표시
+        function displayUsers(data) {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = '';
+
+            if (data.content.length === 0) {
+                usersList.innerHTML = '<p class="text-center">등록된 사용자가 없습니다.</p>';
+                return;
+            }
+
+            data.content.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.innerHTML = `
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="card-title">${user.name} (${user.email})</h5>
+                                <p class="card-text">
+                                    <span class="badge bg-primary">${user.provider}</span>
+                                    <span class="badge bg-info">${user.role}</span>
+                                </p>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        가입일: ${new Date(user.createdAt).toLocaleDateString('ko-KR')}
+                                    </small>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="stats-card">
+                                    <p><strong>게시글:</strong> ${user.postCount}개</p>
+                                    <p><strong>댓글:</strong> ${user.commentCount}개</p>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewUserDetail(${user.userId})">
+                                    상세보기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                usersList.appendChild(card);
+            });
+
+            // 페이지네이션
+            displayUsersPagination(data);
+        }
+
+        // 사용자 페이지네이션
+        function displayUsersPagination(data) {
+            const pagination = document.getElementById('usersPagination');
+            pagination.innerHTML = '';
+
+            for (let i = 0; i < data.totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (i === currentUserPage ? ' active' : '');
+                li.innerHTML = `<a class="page-link" href="#" onclick="loadUsers(${i}); return false;">${i + 1}</a>`;
+                pagination.appendChild(li);
+            }
+        }
+
+        // 게시글 목록 로드
+        function loadPosts(page) {
+            currentPostPage = page;
+            fetch('/api/admin/posts?page=' + page + '&size=10', {
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayPosts(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('게시글 목록을 불러오는데 실패했습니다.');
+            });
+        }
+
+        // 게시글 목록 표시
+        function displayPosts(data) {
+            const postsList = document.getElementById('postsList');
+            postsList.innerHTML = '';
+
+            if (data.content.length === 0) {
+                postsList.innerHTML = '<p class="text-center">게시글이 없습니다.</p>';
+                return;
+            }
+
+            data.content.forEach(post => {
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                
+                let authorInfoHtml = '';
+                if (post.authorInfo) {
+                    authorInfoHtml = `
+                        <div class="author-info">
+                            <strong>📧 실제 작성자 정보 (관리자 전용)</strong><br>
+                            이름: ${post.authorInfo.name}<br>
+                            이메일: ${post.authorInfo.email}<br>
+                            로그인 방식: ${post.authorInfo.provider}<br>
+                            역할: ${post.authorInfo.role}
+                        </div>
+                    `;
+                } else {
+                    authorInfoHtml = `
+                        <div class="author-info">
+                            <strong>⚠️ 구버전 데이터</strong><br>
+                            작성자 정보가 없습니다 (비밀번호 기반 작성)
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="card-body">
+                        <h5 class="card-title">${post.title}</h5>
+                        <p class="card-text">닉네임: ${post.nickname}</p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                조회수: ${post.viewCount} | 
+                                작성일: ${new Date(post.createdAt).toLocaleString('ko-KR')}
+                            </small>
+                        </p>
+                        ${authorInfoHtml}
+                        <a href="/posts/${post.id}" class="btn btn-sm btn-outline-primary mt-2">게시글 보기</a>
+                    </div>
+                `;
+                postsList.appendChild(card);
+            });
+
+            // 페이지네이션
+            displayPostsPagination(data);
+        }
+
+        // 게시글 페이지네이션
+        function displayPostsPagination(data) {
+            const pagination = document.getElementById('postsPagination');
+            pagination.innerHTML = '';
+
+            for (let i = 0; i < data.totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (i === currentPostPage ? ' active' : '');
+                li.innerHTML = `<a class="page-link" href="#" onclick="loadPosts(${i}); return false;">${i + 1}</a>`;
+                pagination.appendChild(li);
+            }
+        }
+
+        // 사용자 상세 정보 보기
+        function viewUserDetail(userId) {
+            const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+            const content = document.getElementById('userDetailContent');
+            content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+            modal.show();
+
+            // 사용자 게시글 조회
+            Promise.all([
+                fetch('/api/admin/users/' + userId + '/posts', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                }).then(r => r.json()),
+                fetch('/api/admin/users/' + userId + '/comments', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                }).then(r => r.json())
+            ])
+            .then(([posts, comments]) => {
+                let html = '<h5>작성한 게시글 (' + posts.length + '개)</h5>';
+                if (posts.length > 0) {
+                    html += '<ul class="list-group mb-4">';
+                    posts.forEach(post => {
+                        html += `
+                            <li class="list-group-item">
+                                <a href="/posts/${post.id}">${post.title}</a>
+                                <span class="badge bg-secondary">${post.nickname}</span>
+                                <small class="text-muted d-block">${new Date(post.createdAt).toLocaleString('ko-KR')}</small>
+                            </li>
+                        `;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += '<p class="text-muted">작성한 게시글이 없습니다.</p>';
+                }
+
+                html += '<h5>작성한 댓글 (' + comments.length + '개)</h5>';
+                if (comments.length > 0) {
+                    html += '<ul class="list-group">';
+                    comments.forEach(comment => {
+                        html += `
+                            <li class="list-group-item">
+                                <strong>게시글:</strong> <a href="/posts/${comment.postId}">${comment.postTitle}</a><br>
+                                <strong>내용:</strong> ${comment.content}<br>
+                                <small class="text-muted">${new Date(comment.createdAt).toLocaleString('ko-KR')}</small>
+                            </li>
+                        `;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += '<p class="text-muted">작성한 댓글이 없습니다.</p>';
+                }
+
+                content.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                content.innerHTML = '<div class="alert alert-danger">정보를 불러오는데 실패했습니다.</div>';
+            });
+        }
+    </script>
+</body>
+</html>

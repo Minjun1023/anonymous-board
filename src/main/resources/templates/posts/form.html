@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header(${post != null ? '게시글 수정' : '게시글 작성'})}">
+</head>
+<body>
+    <div th:replace="~{fragments/layout :: navigation}"></div>
+
+    <div class="container main-content">
+        <h2 th:text="${post != null ? '게시글 수정' : '게시글 작성'}"></h2>
+
+        <form id="postForm" th:object="${post}" class="mt-4">
+            <div class="mb-3">
+                <label for="nickname" class="form-label">닉네임</label>
+                <input type="text" class="form-control" id="nickname" name="nickname"
+                       th:value="${post != null ? post.nickname : ''}" required>
+            </div>
+            <div class="mb-3">
+                <label for="title" class="form-label">제목</label>
+                <input type="text" class="form-control" id="title" name="title"
+                       th:value="${post != null ? post.title : ''}" required>
+            </div>
+            <div class="mb-3">
+                <label for="content" class="form-label">내용</label>
+                <textarea class="form-control" id="content" name="content" rows="10"
+                          th:text="${post != null ? post.content : ''}" required></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">비밀번호</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary" onclick="history.back()">취소</button>
+                <button type="submit" class="btn btn-primary">
+                    <span th:text="${post != null ? '수정하기' : '작성하기'}"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+
+    <script th:inline="javascript">
+        const postId = [[${post != null ? post.id : null}]];
+        const isEdit = postId !== null;
+
+        document.getElementById('postForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const nickname = document.getElementById('nickname').value;
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            const password = document.getElementById('password').value;
+
+            if (!nickname.trim() || !title.trim() || !content.trim() || !password.trim()) {
+                alert('모든 필드를 입력해주세요.');
+                return;
+            }
+
+            const url = isEdit ? `/api/posts/${postId}` : '/api/posts';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const postData = {
+                nickname: nickname,
+                title: title,
+                content: content,
+                password: password
+            };
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(postData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+            })
+            .then(message => {
+                alert(message);
+                window.location.href = '/posts';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('오류가 발생했습니다: ' + error.message);
+            });
+        });
+    </script>
+</body>
+</html>

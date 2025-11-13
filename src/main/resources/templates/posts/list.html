@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>게시글 목록</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+<body>
+    <div th:replace="~{fragments/layout :: navigation}"></div>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between mb-3">
+            <h2>게시글 목록</h2>
+            <div id="writePostBtnContainer" style="display: none;">
+                <a href="/posts/write" class="btn btn-primary">글 작성</a>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" data-sort="latest">최신순</button>
+                    <button type="button" class="btn btn-outline-secondary" data-sort="likes">추천순</button>
+                    <button type="button" class="btn btn-outline-secondary" data-sort="dislikes">비추천순</button>
+                    <button type="button" class="btn btn-outline-secondary" data-sort="viewCount">조회순</button>
+                    <button type="button" class="btn btn-outline-secondary" data-sort="comments">댓글순</button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="searchInput" placeholder="검색어를 입력하세요">
+                    <button class="btn btn-outline-secondary" type="button" onclick="searchPosts()">검색</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="postsContainer">
+            <p class="text-center my-5">로딩 중...</p>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+
+    <script>
+        let currentSort = 'latest';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPosts();
+            checkAuthStatus();
+            
+            document.querySelectorAll('[data-sort]').forEach(button => {
+                button.addEventListener('click', function() {
+                    currentSort = this.dataset.sort;
+                    document.querySelectorAll('[data-sort]').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    loadPosts();
+                });
+            });
+
+            document.addEventListener('userAuthenticated', function() {
+                document.getElementById('writePostBtnContainer').style.display = 'block';
+            });
+        });
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/users/me', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    document.getElementById('writePostBtnContainer').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+
+        function loadPosts(page = 0, size = 10) {
+            const params = new URLSearchParams({
+                page: page,
+                size: size,
+                sortBy: currentSort
+            });
+
+            fetch('/api/posts?' + params.toString(), {
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch');
+                    return response.json();
+                })
+                .then(data => {
+                    const container = document.getElementById('postsContainer');
+                    
+                    if (!data.posts || data.posts.length === 0) {
+                        container.innerHTML = '<p class="text-center my-5">게시글이 없습니다.</p>';
+                        return;
+                    }
+
+                    // 게시글 목록 렌더링
+                    const postsHtml = data.posts.map(post => {
+                        const title = String(post.title).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const content = String(post.content).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const nickname = String(post.nickname).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
+                        const date = post.createdAt.substring(0, 16).replace('T', ' ');
+                        
+                        return `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a href="/posts/${post.id}" class="text-decoration-none">${title}</a>
+                                </h5>
+                                <p class="card-text text-muted">${shortContent}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">작성자: ${nickname}</small>
+                                    <div>
+                                        <span class="me-3">
+                                            <i class="bi bi-hand-thumbs-up"></i> ${post.likes || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-hand-thumbs-down"></i> ${post.dislikes || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-eye"></i> ${post.viewCount || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-chat"></i> ${post.commentCount || 0}
+                                        </span>
+                                        <small class="text-muted">${date}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    // 페이지네이션 렌더링
+                    const pagination = renderPagination(data);
+                    
+                    container.innerHTML = postsHtml + pagination;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('postsContainer').innerHTML = 
+                        '<div class="alert alert-danger">게시글을 불러오는데 실패했습니다.</div>';
+                });
+        }
+
+        function renderPagination(data) {
+            if (data.totalPages <= 1) return '';
+
+            let html = '<nav aria-label="Page navigation" class="mt-4"><ul class="pagination justify-content-center">';
+            
+            // 이전 버튼
+            html += `<li class="page-item ${!data.hasPrevious ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadPosts(${data.currentPage - 1}); return false;">이전</a>
+            </li>`;
+            
+            // 페이지 번호들
+            const startPage = Math.max(0, data.currentPage - 2);
+            const endPage = Math.min(data.totalPages - 1, data.currentPage + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<li class="page-item ${i === data.currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadPosts(${i}); return false;">${i + 1}</a>
+                </li>`;
+            }
+            
+            // 다음 버튼
+            html += `<li class="page-item ${!data.hasNext ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadPosts(${data.currentPage + 1}); return false;">다음</a>
+            </li>`;
+            
+            html += '</ul></nav>';
+            return html;
+        }
+
+        function searchPosts(page = 0) {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) {
+                loadPosts();
+                return;
+            }
+
+            const params = new URLSearchParams({
+                keyword: searchTerm,
+                page: page,
+                size: 10
+            });
+
+            fetch('/api/posts/search?' + params.toString(), {
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Search failed');
+                    return response.json();
+                })
+                .then(data => {
+                    const container = document.getElementById('postsContainer');
+                    
+                    if (!data.content || data.content.length === 0) {
+                        container.innerHTML = '<p class="text-center my-5">검색 결과가 없습니다.</p>';
+                        return;
+                    }
+
+                    const postsHtml = data.content.map(post => {
+                        const title = String(post.title).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const content = String(post.content).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const nickname = String(post.nickname).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
+                        const date = post.createdAt.substring(0, 16).replace('T', ' ');
+                        
+                        return `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a href="/posts/${post.id}" class="text-decoration-none">${title}</a>
+                                </h5>
+                                <p class="card-text text-muted">${shortContent}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">작성자: ${nickname}</small>
+                                    <div>
+                                        <span class="me-3">
+                                            <i class="bi bi-hand-thumbs-up"></i> ${post.likes || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-hand-thumbs-down"></i> ${post.dislikes || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-eye"></i> ${post.viewCount || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-chat"></i> ${post.commentCount || 0}
+                                        </span>
+                                        <small class="text-muted">${date}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    const pagination = renderSearchPagination(data, searchTerm);
+                    container.innerHTML = postsHtml + pagination;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('postsContainer').innerHTML = 
+                        '<div class="alert alert-danger">검색에 실패했습니다.</div>';
+                });
+        }
+
+        function renderSearchPagination(data, searchTerm) {
+            if (data.totalPages <= 1) return '';
+
+            let html = '<nav aria-label="Page navigation" class="mt-4"><ul class="pagination justify-content-center">';
+            
+            html += `<li class="page-item ${data.first ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="searchPosts(${data.number - 1}); return false;">이전</a>
+            </li>`;
+            
+            const startPage = Math.max(0, data.number - 2);
+            const endPage = Math.min(data.totalPages - 1, data.number + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<li class="page-item ${i === data.number ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="searchPosts(${i}); return false;">${i + 1}</a>
+                </li>`;
+            }
+            
+            html += `<li class="page-item ${data.last ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="searchPosts(${data.number + 1}); return false;">다음</a>
+            </li>`;
+            
+            html += '</ul></nav>';
+            return html;
+        }
+
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchPosts();
+        });
+    </script>
+</body>
+</html>

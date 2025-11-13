@@ -1,7 +1,7 @@
 package com.example.anonymous_board.auth.oauth;
 
 import com.example.anonymous_board.domain.Role;
-import com.example.anonymous_board.domain.User;
+import com.example.anonymous_board.domain.Member;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -11,23 +11,23 @@ import java.util.UUID;
 @Getter
 public class OAuthAttributes {
 
-    private Map<String, Object> attributes;
-    private String nameAttributeKey;
-    private String name;
-    private String email;
-    private String picture;
-    private String provider;
+    private Map<String, Object> attributes; // OAuth 제공자로부터 받은 사용자 정보 전체
+    private String nameAttributeKey;    // OAuth 식별자 키
+    private String name;    // 사용자 이름 또는 닉네임
+    private String email;   // 사용자 이메일
+    private String provider;    // 제공자 이름(Google, Kakao, Naver)
 
+    // 소셜 로그인을 통해 얻은 정보
     @Builder
-    public OAuthAttributes(Map<String, Object> attributes, String nameAttributeKey, String name, String email, String picture, String provider) {
+    public OAuthAttributes(Map<String, Object> attributes, String nameAttributeKey, String name, String email, String provider) {
         this.attributes = attributes;
         this.nameAttributeKey = nameAttributeKey;
         this.name = name;
         this.email = email;
-        this.picture = picture;
         this.provider = provider;
-    }
+    }   
 
+    // 로그인 요청 시 어떤 OAuth 제공자인지 구별
     public static OAuthAttributes of(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         if ("naver".equals(registrationId)) {
             return ofNaver(registrationId, "id", attributes);
@@ -38,17 +38,18 @@ public class OAuthAttributes {
         return ofGoogle(registrationId, userNameAttributeName, attributes);
     }
 
+    // Google
     private static OAuthAttributes ofGoogle(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         return OAuthAttributes.builder()
                 .name((String) attributes.get("name"))
                 .email((String) attributes.get("email"))
-                .picture((String) attributes.get("picture"))
                 .attributes(attributes)
                 .nameAttributeKey(userNameAttributeName)
                 .provider(registrationId)
                 .build();
     }
 
+    // Kakao
     private static OAuthAttributes ofKakao(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
         Map<String, Object> kakaoProfile = (Map<String, Object>) kakaoAccount.get("profile");
@@ -56,34 +57,33 @@ public class OAuthAttributes {
         return OAuthAttributes.builder()
                 .name((String) kakaoProfile.get("nickname"))
                 .email((String) kakaoAccount.get("email"))
-                .picture((String) kakaoProfile.get("profile_image_url"))
                 .attributes(attributes)
                 .nameAttributeKey(userNameAttributeName)
                 .provider(registrationId)
                 .build();
     }
 
+    // Naver
     private static OAuthAttributes ofNaver(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         Map<String, Object> response = (Map<String, Object>) attributes.get("response");
 
         return OAuthAttributes.builder()
                 .name((String) response.get("name"))
                 .email((String) response.get("email"))
-                .picture((String) response.get("profile_image"))
                 .attributes(response)
                 .nameAttributeKey(userNameAttributeName)
                 .provider(registrationId)
                 .build();
     }
-
-    public User toEntity() {
-        return User.builder()
-                .nickname(name) // 소셜 로그인에서는 name을 nickname으로 사용
+    // OAuthAttributes -> User
+    public Member toEntity() {
+        return Member.builder()
+                .nickname(name)
                 .email(email)
-                .password(UUID.randomUUID().toString()) // 비밀번호는 임의의 값으로 채움
+                .password(UUID.randomUUID().toString())
                 .role(Role.USER)
-                .emailVerified(true) // 소셜 로그인은 이메일 인증된 것으로 간주
-                .provider(provider) // "google", "kakao", "naver"
+                .emailVerified(true)
+                .provider(provider)
                 .build();
     }
 }

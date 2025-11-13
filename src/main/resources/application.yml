@@ -1,4 +1,8 @@
 spring:
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/anonymous-board_db
@@ -7,7 +11,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
@@ -16,9 +20,7 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: songmj2000@gmail.com
     password: ${GOOGLE_APP_PASSWORD}
-    properties:
       mail:
         smtp:
           auth: true
@@ -42,7 +44,7 @@ spring:
               - account_email
             client-name: Kakao
             authorization-grant-type: authorization_code
-            redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-authentication-method: client_secret_post
           naver:
             client-id: ${NAVER_CLIENT_ID}
@@ -69,6 +71,7 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+
 logging:
   level:
     org:
@@ -76,3 +79,5 @@ logging:
         type:
           descriptor:
             sql: trace
+      springframework:
+        security: DEBUG

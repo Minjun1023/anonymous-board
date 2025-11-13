@@ -6,24 +6,32 @@
     <script>
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
             const accessToken = urlParams.get('accessToken');
             const refreshToken = urlParams.get('refreshToken');
 
-            if (accessToken && refreshToken) {
+            if (token) {
+                // 새로운 JWT 토큰 방식
+                console.log("JWT Token:", token);
+                localStorage.setItem('jwtToken', token);
+                console.log('소셜 로그인이 성공적으로 완료되었습니다.');
+                window.location.href = '/';
+            } else if (accessToken && refreshToken) {
+                // 이전 방식 호환성 유지
                 console.log("Access Token:", accessToken);
                 console.log("Refresh Token:", refreshToken);
                 
                 // 토큰을 localStorage에 저장
                 localStorage.setItem('accessToken', accessToken);
                 localStorage.setItem('refreshToken', refreshToken);
+                localStorage.setItem('jwtToken', accessToken); // jwtToken으로도 저장
 
-                // TODO: 토큰 저장 후 메인 페이지 또는 이전 페이지로 이동
-                alert('소셜 로그인이 성공적으로 완료되었습니다. 메인 페이지로 이동합니다.');
-                window.location.href = '/'; // 메인 페이지로 이동
+                console.log('소셜 로그인이 성공적으로 완료되었습니다.');
+                window.location.href = '/';
             } else {
                 console.error('OAuth token not found in URL.');
                 alert('로그인에 실패했습니다. (토큰 없음)');
-                window.location.href = '/login.html'; // TODO: 로그인 페이지 경로가 있다면 설정
+                window.location.href = '/login';
             }
         };
     </script>

@@ -1,0 +1,167 @@
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="header(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">익명 게시판</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .nav-link.active {
+            font-weight: bold;
+            color: #0d6efd !important;
+        }
+        .main-content {
+            min-height: calc(100vh - 160px);
+            padding: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <header th:fragment="navigation">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container">
+                <a class="navbar-brand" href="/">익명 게시판</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">홈</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/posts">게시글 목록</a>
+                        </li>
+                    </ul>
+                    <!-- 로그인 상태 네비게이션 -->
+                    <ul class="navbar-nav" id="authNav" style="display:none;">
+                        <li class="nav-item" id="adminNav" style="display:none;">
+                            <a class="nav-link" href="/admin.html">관리자 페이지</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/my-chats">내 채팅</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/profile">프로필</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="logout(); return false;">로그아웃</a>
+                        </li>
+                    </ul>
+                    <!-- 비로그인 상태 네비게이션 -->
+                    <ul class="navbar-nav" id="guestNav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/login">로그인</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/signup">회원가입</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <footer th:fragment="footer">
+        <div class="container">
+            <hr>
+            <p class="text-center text-muted">&copy; 2025 익명 게시판. All rights reserved.</p>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // 로그아웃 함수
+            async function logout() {
+                console.log('Logout started...');
+                
+                // 즉시 네비게이션 UI 변경 (로그인 버튼 표시)
+                const authNav = document.getElementById('authNav');
+                const guestNav = document.getElementById('guestNav');
+                const adminNav = document.getElementById('adminNav');
+                
+                if (authNav) authNav.style.display = 'none';
+                if (guestNav) guestNav.style.display = 'flex';
+                if (adminNav) adminNav.style.display = 'none';
+                
+                // 클라이언트 측 쿠키 삭제
+                const cookies = ['access_token', 'jwt_token', 'refreshToken', 'JSESSIONID'];
+                cookies.forEach(cookieName => {
+                    document.cookie = cookieName + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+                    console.log('Deleted cookie:', cookieName);
+                });
+                
+                try {
+                    // 서버에 로그아웃 요청
+                    const response = await fetch('/logout', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        }
+                    });
+                    console.log('Logout response:', response.status);
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+                
+                // 짧은 지연 후 페이지 이동
+                setTimeout(() => {
+                    console.log('Redirecting to home...');
+                    window.location.href = '/';
+                }, 100);
+            }
+
+            // 네비게이션 업데이트
+            async function updateNavigation() {
+                const authNav = document.getElementById('authNav');
+                const guestNav = document.getElementById('guestNav');
+                const adminNav = document.getElementById('adminNav');
+
+                // 기본값: 비로그인 상태로 설정
+                if (authNav) authNav.style.display = 'none';
+                if (guestNav) guestNav.style.display = 'flex';
+                if (adminNav) adminNav.style.display = 'none';
+
+                try {
+                    const response = await fetch('/api/users/me', {
+                        credentials: 'include'  // 쿠키를 요청에 포함
+                    });
+                    
+                    if (response.ok) {
+                        const user = await response.json();
+                        console.log('User authenticated:', user);
+                        
+                        // 로그인 상태 UI 표시
+                        if (authNav) authNav.style.display = 'flex';
+                        if (guestNav) guestNav.style.display = 'none';
+                        
+                        // 관리자인 경우 관리자 메뉴 표시
+                        if (user.role === 'ADMIN' && adminNav) {
+                            adminNav.style.display = 'block';
+                        }
+
+                        // 인증 성공 이벤트 발생
+                        document.dispatchEvent(new Event('userAuthenticated'));
+                    } else {
+                        console.log('User not authenticated, status:', response.status);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch user info:', error);
+                }
+            }
+
+            // 현재 페이지에 해당하는 네비게이션 링크 활성화
+            document.addEventListener('DOMContentLoaded', function() {
+                // 네비게이션 업데이트
+                updateNavigation();
+                
+                // 현재 페이지 활성화
+                const currentPath = window.location.pathname;
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    if (link.getAttribute('href') === currentPath) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        </script>
+    </footer>
+</body>
+</html>

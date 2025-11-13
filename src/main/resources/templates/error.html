@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: header('오류 페이지')}">
+</head>
+<body>
+    <div th:replace="~{fragments/layout :: navigation}"></div>
+
+    <div class="container main-content">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <h1 class="display-1" th:text="${status} ?: '오류'">오류</h1>
+                <p class="lead" th:text="${error} ?: '알 수 없는 오류가 발생했습니다.'">알 수 없는 오류가 발생했습니다.</p>
+                <p class="text-muted" th:text="${message} ?: ''"></p>
+                <a href="/" class="btn btn-primary mt-4">메인 페이지로 돌아가기</a>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+</body>
+</html>
