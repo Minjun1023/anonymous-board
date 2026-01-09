@@ -10,12 +10,9 @@ import lombok.Setter;
 public class NewPasswordRequest {
 
     @NotBlank
-    private String token;
+    private String token; // 토큰
 
     @NotBlank
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,16}$",
-            message = "비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자를 포함해야 합니다."
-    )
-    private String password;
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,16}$", message = "비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자를 포함해야 합니다.")
+    private String password; // 비밀번호
 }

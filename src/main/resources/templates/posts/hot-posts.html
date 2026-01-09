@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>핫 게시판</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+</head>
+
+<body>
+    <div th:replace="~{fragments/layout :: navigation}"></div>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between mb-3">
+            <h2>🔥 핫 게시판 <small class="text-muted fs-6"></small></h2>
+        </div>
+
+        <div id="postsContainer">
+            <p class="text-center my-5">로딩 중...</p>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            loadHotPosts();
+        });
+
+        function loadHotPosts(page = 0, size = 10) {
+            const params = new URLSearchParams({
+                page: page,
+                size: size
+            });
+
+            fetch('/api/posts/hot?' + params.toString(), {
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch');
+                    return response.json();
+                })
+                .then(data => {
+                    const container = document.getElementById('postsContainer');
+
+                    if (!data.content || data.content.length === 0) {
+                        container.innerHTML = '<p class="text-center my-5">아직 핫한 게시글이 없습니다. 🔥</p>';
+                        return;
+                    }
+
+                    // 게시글 목록 렌더링
+                    const postsHtml = data.content.map(post => {
+                        const title = String(post.title).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const content = String(post.content).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const nickname = String(post.nickname).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
+                        const date = post.createdAt.substring(0, 16).replace('T', ' ');
+
+                        const profileImage = post.profileImage || '/profiles/default_profile.png';
+
+                        return `
+                        <div class="card mb-3 border-danger">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <span class="badge bg-danger me-2">HOT</span>
+                                    <a href="/posts/${post.id}" class="text-decoration-none text-body">${title}</a>
+                                </h5>
+                                <p class="card-text text-muted">${shortContent}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${profileImage}" alt="Profile" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                        <small class="text-muted">작성자: ${nickname}</small>
+                                    </div>
+                                    <div>
+                                        <span class="me-3 text-danger fw-bold">
+                                            <i class="bi bi-hand-thumbs-up-fill"></i> ${post.likes || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-hand-thumbs-down"></i> ${post.dislikes || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-eye"></i> ${post.viewCount || 0}
+                                        </span>
+                                        <span class="me-3">
+                                            <i class="bi bi-chat"></i> ${post.commentCount || 0}
+                                        </span>
+                                        <small class="text-muted">${date}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+
+                    // 페이지네이션 렌더링
+                    const pagination = renderPagination(data);
+
+                    container.innerHTML = postsHtml + pagination;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('postsContainer').innerHTML =
+                        '<div class="alert alert-danger">게시글을 불러오는데 실패했습니다.</div>';
+                });
+        }
+
+        function renderPagination(data) {
+            if (data.totalPages <= 1) return '';
+
+            let html = '<nav aria-label="Page navigation" class="mt-4"><ul class="pagination justify-content-center">';
+
+            // 이전 버튼
+            html += `<li class="page-item ${data.first ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadHotPosts(${data.number - 1}); return false;">이전</a>
+            </li>`;
+
+            // 페이지 번호들
+            const startPage = Math.max(0, data.number - 2);
+            const endPage = Math.min(data.totalPages - 1, data.number + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<li class="page-item ${i === data.number ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadHotPosts(${i}); return false;">${i + 1}</a>
+                </li>`;
+            }
+
+            // 다음 버튼
+            html += `<li class="page-item ${data.last ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadHotPosts(${data.number + 1}); return false;">다음</a>
+            </li>`;
+
+            html += '</ul></nav>';
+            return html;
+        }
+    </script>
+</body>
+
+</html>

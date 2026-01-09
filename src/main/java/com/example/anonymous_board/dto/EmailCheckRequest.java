@@ -13,8 +13,8 @@ public class EmailCheckRequest {
 
     @Email
     @NotBlank
-    private String email;
+    private String email; // 이메일
 
     @NotBlank
-    private String token;
+    private String token; // 토큰
 }

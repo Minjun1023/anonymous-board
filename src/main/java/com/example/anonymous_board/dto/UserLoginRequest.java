@@ -9,8 +9,8 @@ import lombok.Setter;
 public class UserLoginRequest {
 
     @NotBlank(message = "아이디는 필수 입력 값입니다.")
-    private String username;
+    private String username; // 사용자 ID
 
     @NotBlank(message = "비밀번호는 필수 입력 값입니다.")
-    private String password;
+    private String password; // 사용자 비밀번호
 }
