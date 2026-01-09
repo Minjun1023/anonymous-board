@@ -12,7 +12,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -23,7 +22,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -35,8 +33,7 @@ public class UserController {
     // 회원가입
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@Valid @RequestBody UserSignupRequest request) {
-        Long userId = userService.signup(request);
-        log.info("New user created: id={}, email={}", userId, request.getEmail());
+        userService.signup(request);
         return ResponseEntity.ok("회원가입이 성공적으로 완료되었습니다.");
     }
 
@@ -60,10 +57,10 @@ public class UserController {
 
     // 로그인
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@Valid @RequestBody UserLoginRequest request, HttpServletResponse response) {
+    public ResponseEntity<Map<String, String>> login(@Valid @RequestBody UserLoginRequest request,
+            HttpServletResponse response) {
         try {
             TokenInfo tokenInfo = userService.login(request.getUsername(), request.getPassword());
-            log.info("User logged in: username={}", request.getUsername());
 
             // HttpOnly 쿠키 (보안용 - XSS 방지)
             Cookie httpOnlyCookie = new Cookie("access_token", tokenInfo.getAccessToken());
@@ -98,19 +95,20 @@ public class UserController {
             String username = userService.findUsernameByEmail(email);
             return ResponseEntity.ok(Collections.singletonMap("username", username));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("message", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("message", e.getMessage()));
         }
     }
 
     // 비밀번호 재설정 링크 발송
     @PostMapping("/reset-password")
-    public ResponseEntity<Void> sendResetPasswordEmail(@Valid @RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<String> sendResetPasswordEmail(@Valid @RequestBody ResetPasswordRequest request) {
         try {
             Member member = userService.findByUsername(request.getUsername());
             emailService.sendPasswordResetLink(member);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("비밀번호 재설정 링크가 이메일로 발송되었습니다.");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("사용자를 찾을 수 없습니다.");
         }
     }
 
@@ -132,7 +130,7 @@ public class UserController {
         if (member == null) {
             return ResponseEntity.status(401).body("로그인이 필요합니다.");
         }
-        
+
         // 필요한 정보만 반환
         Map<String, Object> response = new HashMap<>();
         response.put("id", member.getId());
@@ -141,7 +139,7 @@ public class UserController {
         response.put("nickname", member.getNickname());
         response.put("provider", member.getProvider());
         response.put("role", member.getRole().name());
-        
+
         return ResponseEntity.ok(response);
     }
 }

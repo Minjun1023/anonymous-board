@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>프로필 관리</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         .profile-container {
             max-width: 600px;
             margin: 50px auto;
             padding: 20px;
         }
+
         .profile-image {
             width: 150px;
             height: 150px;
@@ -18,27 +21,33 @@
             object-fit: cover;
             margin-bottom: 20px;
         }
+
         .profile-upload {
             margin: 20px 0;
         }
+
         .profile-info {
             margin-top: 30px;
         }
     </style>
 </head>
+
 <body>
+    <div th:replace="~{fragments/layout :: navigation}"></div>
+
     <div class="container profile-container">
         <h2 class="text-center mb-4">프로필 관리</h2>
-        
+
         <!-- 프로필 이미지 섹션 -->
         <div class="text-center">
             <img id="profileImage" src="/profiles/default_profile.png" alt="프로필 이미지" class="profile-image">
-            
+
             <div class="profile-upload">
                 <form id="imageUploadForm" class="mb-3">
                     <div class="input-group">
                         <input type="file" class="form-control" id="imageInput" accept="image/*">
-                        <button class="btn btn-primary" type="submit">업로드</button>
+                        <button class="btn btn-primary" type="submit">변경</button>
+                        <button class="btn btn-outline-danger" type="button" id="deleteImageBtn">삭제</button>
                     </div>
                 </form>
             </div>
@@ -55,8 +64,158 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">닉네임</label>
-                        <p class="form-control-static" th:text="${user.nickname}">사용자</p>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="nicknameInput" th:value="${user.nickname}">
+                            <button class="btn btn-outline-primary" type="button" id="updateNicknameBtn">변경</button>
+                        </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- 비밀번호 변경 섹션 -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">비밀번호 변경</h5>
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">현재 비밀번호</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="currentPassword"
+                                placeholder="현재 비밀번호를 입력하세요">
+                            <button class="btn btn-outline-secondary" type="button" id="toggleCurrentPassword">
+                                <i class="bi bi-eye" id="toggleCurrentPasswordIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">새 비밀번호</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="newPassword"
+                                placeholder="8~16자 영문 대소문자, 숫자, 특수문자 포함">
+                            <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
+                                <i class="bi bi-eye" id="toggleNewPasswordIcon"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">8~16자의 영문 대소문자, 숫자, 특수문자를 포함해야 합니다.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">새 비밀번호 확인</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="confirmPassword"
+                                placeholder="새 비밀번호를 다시 입력하세요">
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                <i class="bi bi-eye" id="toggleConfirmPasswordIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" type="button" id="changePasswordBtn">비밀번호 변경</button>
+                </div>
+            </div>
+
+            <!-- 내가 작성한 글/댓글 섹션 -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="myActivityTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="posts-tab" data-bs-toggle="tab"
+                                data-bs-target="#posts-content" type="button" role="tab">
+                                내가 작성한 글
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="comments-tab" data-bs-toggle="tab"
+                                data-bs-target="#comments-content" type="button" role="tab">
+                                내가 작성한 댓글
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="myActivityTabContent">
+                        <!-- 내가 작성한 글 -->
+                        <div class="tab-pane fade show active" id="posts-content" role="tabpanel">
+                            <div id="myPostsList" class="mt-3">
+                                <p class="text-muted">로딩 중...</p>
+                            </div>
+                            <nav id="postsPagination" class="mt-3" style="display:none;">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item" id="postsPrevItem">
+                                        <button class="page-link" id="postsPrevBtn">이전</button>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link" id="postsPageInfo">1 / 1</span>
+                                    </li>
+                                    <li class="page-item" id="postsNextItem">
+                                        <button class="page-link" id="postsNextBtn">다음</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                        <!-- 내가 작성한 댓글 -->
+                        <div class="tab-pane fade" id="comments-content" role="tabpanel">
+                            <div id="myCommentsList" class="mt-3">
+                                <p class="text-muted">로딩 중...</p>
+                            </div>
+                            <nav id="commentsPagination" class="mt-3" style="display:none;">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item" id="commentsPrevItem">
+                                        <button class="page-link" id="commentsPrevBtn">이전</button>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span class="page-link" id="commentsPageInfo">1 / 1</span>
+                                    </li>
+                                    <li class="page-item" id="commentsNextItem">
+                                        <button class="page-link" id="commentsNextBtn">다음</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 회원 탈퇴 섹션 -->
+            <div class="card mt-4 border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>위험 구역</h5>
+                    <p class="text-muted">회원 탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.</p>
+                    <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal"
+                        data-bs-target="#deleteAccountModal">회원 탈퇴</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 회원 탈퇴 확인 모달 -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>회원 탈퇴</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>주의!</strong> 회원 탈퇴 시 다음 데이터가 모두 삭제됩니다:
+                        <ul class="mb-0 mt-2">
+                            <li>작성한 게시글</li>
+                            <li>작성한 댓글</li>
+                            <li>프로필 정보</li>
+                            <li>대화 내용</li>
+                        </ul>
+                    </div>
+                    <p class="text-danger fw-bold">이 작업은 되돌릴 수 없습니다.</p>
+                    <div class="mb-3">
+                        <label for="deleteAccountPassword" class="form-label">비밀번호 확인</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="deleteAccountPassword"
+                                placeholder="비밀번호를 입력하세요">
+                            <button class="btn btn-outline-secondary" type="button" id="toggleDeleteAccountPassword">
+                                <i class="bi bi-eye" id="toggleDeleteAccountPasswordIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteAccountBtn">회원 탈퇴</button>
                 </div>
             </div>
         </div>
@@ -80,34 +239,63 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <div th:replace="~{fragments/layout :: footer}"></div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const imageUploadForm = document.getElementById('imageUploadForm');
             const imageInput = document.getElementById('imageInput');
             const profileImage = document.getElementById('profileImage');
+            const deleteImageBtn = document.getElementById('deleteImageBtn');
             const alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
             const modalMessage = document.getElementById('modalMessage');
 
-            // 현재 프로필 이미지 로드
-            fetch('/api/users/profile/image', {
-                credentials: 'include',
-                headers: {
-                    'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
+            // 헤더 생성 함수
+            function getHeaders(contentType = 'application/json') {
+                const headers = {};
+                if (contentType) {
+                    headers['Content-Type'] = contentType;
                 }
+
+                const token = localStorage.getItem('jwtToken');
+                if (token) {
+                    headers['Authorization'] = 'Bearer ' + token;
+                }
+                return headers;
+            }
+
+            // 현재 프로필 이미지 로드
+            fetch('/api/profile/image', {
+                credentials: 'include',
+                headers: getHeaders(null) // Content-Type 불필요
             })
-            .then(response => response.text())
-            .then(imageUrl => {
-                profileImage.src = imageUrl;
-            })
-            .catch(error => {
-                console.error('프로필 이미지 로드 실패:', error);
-            });
+                .then(response => {
+                    if (!response.ok) {
+                        // 인증 실패 등 에러 시 기본 이미지 사용
+                        return '/profiles/default_profile.png';
+                    }
+                    return response.text();
+                })
+                .then(imageUrl => {
+                    // 유효한 이미지 URL인지 확인 (경로가 /profiles/로 시작하거나 http로 시작)
+                    if (imageUrl && (imageUrl.startsWith('/profiles/') || imageUrl.startsWith('http'))) {
+                        // 브라우저 캐싱 방지를 위해 타임스탬프 추가
+                        const cacheBuster = '?t=' + new Date().getTime();
+                        profileImage.src = imageUrl + cacheBuster;
+                    } else {
+                        // 비정상적인 응답인 경우 기본 이미지 사용
+                        profileImage.src = '/profiles/default_profile.png';
+                    }
+                })
+                .catch(error => {
+                    console.error('프로필 이미지 로드 실패:', error);
+                    profileImage.src = '/profiles/default_profile.png';
+                });
 
             // 이미지 업로드
-            imageUploadForm.addEventListener('submit', function(e) {
+            imageUploadForm.addEventListener('submit', function (e) {
                 e.preventDefault();
-                
+
                 const file = imageInput.files[0];
                 if (!file) {
                     showAlert('이미지를 선택해주세요.');
@@ -117,35 +305,415 @@
                 const formData = new FormData();
                 formData.append('file', file);
 
-                fetch('/api/users/profile/image', {
+                const headers = getHeaders(null); // FormData는 Content-Type 자동 설정
+                // FormData 전송 시 Content-Type 헤더를 직접 설정하면 안됨 (boundary 문제)
+
+                fetch('/api/profile/image', {
                     method: 'POST',
                     credentials: 'include',
-                    headers: {
-                        'Authorization': 'Bearer ' + localStorage.getItem('accessToken')
-                    },
+                    headers: headers,
                     body: formData
                 })
-                .then(response => response.text())
-                .then(imageUrl => {
-                    profileImage.src = imageUrl;
-                    showAlert('프로필 이미지가 성공적으로 업데이트되었습니다.');
+                    .then(response => response.text())
+                    .then(imageUrl => {
+                        const cacheBuster = '?t=' + new Date().getTime();
+                        profileImage.src = imageUrl + cacheBuster;
+                        showAlert('프로필 이미지가 성공적으로 업데이트되었습니다.');
+                    })
+                    .catch(error => {
+                        console.error('업로드 실패:', error);
+                        showAlert('이미지 업로드에 실패했습니다.');
+                    });
+            });
+
+            // 이미지 삭제
+            deleteImageBtn.addEventListener('click', function () {
+                if (!confirm('프로필 이미지를 삭제하시겠습니까?')) return;
+
+                fetch('/api/profile/image', {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: getHeaders()
                 })
-                .catch(error => {
-                    console.error('업로드 실패:', error);
-                    showAlert('이미지 업로드에 실패했습니다.');
-                });
+                    .then(response => {
+                        if (response.ok) return response.text();
+                        throw new Error('삭제 실패');
+                    })
+                    .then(imageUrl => {
+                        const cacheBuster = '?t=' + new Date().getTime();
+                        profileImage.src = imageUrl + cacheBuster;
+                        imageInput.value = ''; // clear input
+                        showAlert('프로필 이미지가 삭제되었습니다.');
+                    })
+                    .catch(error => {
+                        console.error('삭제 실패:', error);
+                        showAlert('이미지 삭제에 실패했습니다.');
+                    });
             });
 
             // 이미지 미리보기
-            imageInput.addEventListener('change', function(e) {
+            imageInput.addEventListener('change', function (e) {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
-                    reader.onload = function(e) {
+                    reader.onload = function (e) {
                         profileImage.src = e.target.result;
                     };
                     reader.readAsDataURL(file);
                 }
+            });
+
+            // 닉네임 변경
+            const updateNicknameBtn = document.getElementById('updateNicknameBtn');
+            const nicknameInput = document.getElementById('nicknameInput');
+
+            updateNicknameBtn.addEventListener('click', function () {
+                const newNickname = nicknameInput.value;
+                if (!newNickname) {
+                    showAlert('닉네임을 입력해주세요.');
+                    return;
+                }
+
+                fetch('/api/profile/nickname', {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ nickname: newNickname })
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        } else {
+                            return response.text().then(text => { throw new Error(text) });
+                        }
+                    })
+                    .then(message => {
+                        showAlert(message);
+                    })
+                    .catch(error => {
+                        console.error('닉네임 변경 실패:', error);
+                        let errorMessage = '닉네임 변경에 실패했습니다.';
+                        try {
+                            const errorObj = JSON.parse(error.message);
+                            if (errorObj.message) errorMessage = errorObj.message;
+                        } catch (e) {
+                            if (error.message) errorMessage = error.message;
+                        }
+                        showAlert(errorMessage);
+                    });
+            });
+
+            // 비밀번호 표시/숨김 토글 함수
+            function setupPasswordToggle(inputId, toggleBtnId, toggleIconId) {
+                const input = document.getElementById(inputId);
+                const toggleBtn = document.getElementById(toggleBtnId);
+                const toggleIcon = document.getElementById(toggleIconId);
+
+                toggleBtn.addEventListener('click', function () {
+                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                    input.setAttribute('type', type);
+
+                    if (type === 'text') {
+                        toggleIcon.classList.remove('bi-eye');
+                        toggleIcon.classList.add('bi-eye-slash');
+                    } else {
+                        toggleIcon.classList.remove('bi-eye-slash');
+                        toggleIcon.classList.add('bi-eye');
+                    }
+                });
+            }
+
+            // 비밀번호 토글 설정
+            setupPasswordToggle('currentPassword', 'toggleCurrentPassword', 'toggleCurrentPasswordIcon');
+            setupPasswordToggle('newPassword', 'toggleNewPassword', 'toggleNewPasswordIcon');
+            setupPasswordToggle('confirmPassword', 'toggleConfirmPassword', 'toggleConfirmPasswordIcon');
+            setupPasswordToggle('deleteAccountPassword', 'toggleDeleteAccountPassword', 'toggleDeleteAccountPasswordIcon');
+
+            // 비밀번호 변경
+            const changePasswordBtn = document.getElementById('changePasswordBtn');
+            const currentPasswordInput = document.getElementById('currentPassword');
+            const newPasswordInput = document.getElementById('newPassword');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+
+            changePasswordBtn.addEventListener('click', function () {
+                const currentPassword = currentPasswordInput.value;
+                const newPassword = newPasswordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+
+                // 클라이언트 측 유효성 검사
+                if (!currentPassword) {
+                    showAlert('현재 비밀번호를 입력해주세요.');
+                    return;
+                }
+                if (!newPassword) {
+                    showAlert('새 비밀번호를 입력해주세요.');
+                    return;
+                }
+                if (!confirmPassword) {
+                    showAlert('새 비밀번호 확인을 입력해주세요.');
+                    return;
+                }
+                if (newPassword !== confirmPassword) {
+                    showAlert('새 비밀번호가 일치하지 않습니다.');
+                    return;
+                }
+
+                // 비밀번호 형식 검사
+                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,16}$/;
+                if (!passwordRegex.test(newPassword)) {
+                    showAlert('비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자를 포함해야 합니다.');
+                    return;
+                }
+
+                fetch('/api/profile/password', {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        currentPassword: currentPassword,
+                        newPassword: newPassword,
+                        confirmPassword: confirmPassword
+                    })
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        } else {
+                            return response.text().then(text => { throw new Error(text) });
+                        }
+                    })
+                    .then(message => {
+                        // 입력 필드 초기화
+                        currentPasswordInput.value = '';
+                        newPasswordInput.value = '';
+                        confirmPasswordInput.value = '';
+                        showAlert(message);
+                    })
+                    .catch(error => {
+                        console.error('비밀번호 변경 실패:', error);
+                        showAlert(error.message || '비밀번호 변경에 실패했습니다.');
+                    });
+            });
+
+            // 페이지네이션 상태 변수
+            let postsCurrentPage = 0;
+            let postsTotalPages = 0;
+            let commentsCurrentPage = 0;
+            let commentsTotalPages = 0;
+            const pageSize = 10;
+
+            // 내가 작성한 글 로드
+            function loadMyPosts(page = 0) {
+                const myPostsList = document.getElementById('myPostsList');
+                const postsPagination = document.getElementById('postsPagination');
+                fetch(`/api/profile/posts?page=${page}&size=${pageSize}`, {
+                    credentials: 'include',
+                    headers: getHeaders(null)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        const posts = data.content || [];
+                        postsCurrentPage = data.currentPage;
+                        postsTotalPages = data.totalPages;
+
+                        if (posts.length === 0 && data.totalElements === 0) {
+                            myPostsList.innerHTML = '<p class="text-muted">작성한 글이 없습니다.</p>';
+                            postsPagination.style.display = 'none';
+                            return;
+                        }
+                        myPostsList.innerHTML = posts.map(post => `
+                            <div class="border-bottom py-2">
+                                <a href="/posts/${post.id}" class="text-decoration-none">
+                                    <h6 class="mb-1">${post.title}</h6>
+                                </a>
+                                <small class="text-muted">
+                                    조회 ${post.viewCount} · 댓글 ${post.commentCount} · 
+                                    ${new Date(post.createdAt).toLocaleDateString('ko-KR')}
+                                </small>
+                            </div>
+                        `).join('');
+
+                        // 페이지네이션 UI 업데이트
+                        updatePostsPagination();
+                    })
+                    .catch(error => {
+                        console.error('내 글 로드 실패:', error);
+                        myPostsList.innerHTML = '<p class="text-danger">글을 불러오는데 실패했습니다.</p>';
+                        postsPagination.style.display = 'none';
+                    });
+            }
+
+            // 게시글 페이지네이션 UI 업데이트
+            function updatePostsPagination() {
+                const postsPagination = document.getElementById('postsPagination');
+                const postsPageInfo = document.getElementById('postsPageInfo');
+                const postsPrevItem = document.getElementById('postsPrevItem');
+                const postsNextItem = document.getElementById('postsNextItem');
+
+                if (postsTotalPages <= 1) {
+                    postsPagination.style.display = 'none';
+                    return;
+                }
+
+                postsPagination.style.display = 'block';
+                postsPageInfo.textContent = `${postsCurrentPage + 1} / ${postsTotalPages}`;
+
+                if (postsCurrentPage <= 0) {
+                    postsPrevItem.classList.add('disabled');
+                } else {
+                    postsPrevItem.classList.remove('disabled');
+                }
+
+                if (postsCurrentPage >= postsTotalPages - 1) {
+                    postsNextItem.classList.add('disabled');
+                } else {
+                    postsNextItem.classList.remove('disabled');
+                }
+            }
+
+            // 내가 작성한 댓글 로드
+            function loadMyComments(page = 0) {
+                const myCommentsList = document.getElementById('myCommentsList');
+                const commentsPagination = document.getElementById('commentsPagination');
+                fetch(`/api/profile/comments?page=${page}&size=${pageSize}`, {
+                    credentials: 'include',
+                    headers: getHeaders(null)
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        const comments = data.content || [];
+                        commentsCurrentPage = data.currentPage;
+                        commentsTotalPages = data.totalPages;
+
+                        if (comments.length === 0 && data.totalElements === 0) {
+                            myCommentsList.innerHTML = '<p class="text-muted">작성한 댓글이 없습니다.</p>';
+                            commentsPagination.style.display = 'none';
+                            return;
+                        }
+                        myCommentsList.innerHTML = comments.map(comment => `
+                            <div class="border-bottom py-2">
+                                <a href="/posts/${comment.postId}" class="text-decoration-none">
+                                    <small class="text-primary">${comment.postTitle}</small>
+                                </a>
+                                <p class="mb-1 mt-1">${comment.content}</p>
+                                <small class="text-muted">
+                                    ${new Date(comment.createdAt).toLocaleDateString('ko-KR')}
+                                </small>
+                            </div>
+                        `).join('');
+
+                        // 페이지네이션 UI 업데이트
+                        updateCommentsPagination();
+                    })
+                    .catch(error => {
+                        console.error('내 댓글 로드 실패:', error);
+                        myCommentsList.innerHTML = '<p class="text-danger">댓글을 불러오는데 실패했습니다.</p>';
+                        commentsPagination.style.display = 'none';
+                    });
+            }
+
+            // 댓글 페이지네이션 UI 업데이트
+            function updateCommentsPagination() {
+                const commentsPagination = document.getElementById('commentsPagination');
+                const commentsPageInfo = document.getElementById('commentsPageInfo');
+                const commentsPrevItem = document.getElementById('commentsPrevItem');
+                const commentsNextItem = document.getElementById('commentsNextItem');
+
+                if (commentsTotalPages <= 1) {
+                    commentsPagination.style.display = 'none';
+                    return;
+                }
+
+                commentsPagination.style.display = 'block';
+                commentsPageInfo.textContent = `${commentsCurrentPage + 1} / ${commentsTotalPages}`;
+
+                if (commentsCurrentPage <= 0) {
+                    commentsPrevItem.classList.add('disabled');
+                } else {
+                    commentsPrevItem.classList.remove('disabled');
+                }
+
+                if (commentsCurrentPage >= commentsTotalPages - 1) {
+                    commentsNextItem.classList.add('disabled');
+                } else {
+                    commentsNextItem.classList.remove('disabled');
+                }
+            }
+
+            // 페이지네이션 버튼 이벤트 리스너
+            document.getElementById('postsPrevBtn').addEventListener('click', function () {
+                if (postsCurrentPage > 0) {
+                    loadMyPosts(postsCurrentPage - 1);
+                }
+            });
+
+            document.getElementById('postsNextBtn').addEventListener('click', function () {
+                if (postsCurrentPage < postsTotalPages - 1) {
+                    loadMyPosts(postsCurrentPage + 1);
+                }
+            });
+
+            document.getElementById('commentsPrevBtn').addEventListener('click', function () {
+                if (commentsCurrentPage > 0) {
+                    loadMyComments(commentsCurrentPage - 1);
+                }
+            });
+
+            document.getElementById('commentsNextBtn').addEventListener('click', function () {
+                if (commentsCurrentPage < commentsTotalPages - 1) {
+                    loadMyComments(commentsCurrentPage + 1);
+                }
+            });
+
+            // 페이지 로드 시 내 글과 댓글 로드
+            loadMyPosts(0);
+            loadMyComments(0);
+
+            // 회원 탈퇴
+            const deleteAccountModal = new bootstrap.Modal(document.getElementById('deleteAccountModal'));
+            const confirmDeleteAccountBtn = document.getElementById('confirmDeleteAccountBtn');
+            const deleteAccountPassword = document.getElementById('deleteAccountPassword');
+
+            confirmDeleteAccountBtn.addEventListener('click', function () {
+                const password = deleteAccountPassword.value;
+
+                if (!password) {
+                    showAlert('비밀번호를 입력해주세요.');
+                    return;
+                }
+
+                // 확인 한 번 더
+                if (!confirm('정말로 회원 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                    return;
+                }
+
+                fetch('/api/profile/account', {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: getHeaders('application/json'),
+                    body: JSON.stringify({ password: password })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                throw new Error(text);
+                            });
+                        }
+                        return response.text();
+                    })
+                    .then(message => {
+                        deleteAccountModal.hide();
+                        // 쿠키 삭제
+                        document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        document.cookie = 'refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        localStorage.removeItem('jwtToken');
+                        alert(message);
+                        window.location.href = '/';
+                    })
+                    .catch(error => {
+                        console.error('회원 탈퇴 실패:', error);
+                        showAlert(error.message || '회원 탈퇴에 실패했습니다.');
+                    });
             });
 
             // 알림 표시 함수
@@ -156,4 +724,5 @@
         });
     </script>
 </body>
+
 </html>
