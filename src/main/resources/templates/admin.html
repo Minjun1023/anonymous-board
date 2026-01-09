@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .admin-container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .stats-card {
+            border-left: 4px solid #0d6efd;
+        }
+
+        .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .user-badge {
+            font-size: 0.85rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div th:replace="~{fragments/layout :: navigation}"></div>
+
+    <div class="container admin-container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-shield-lock-fill me-2"></i>관리자 대시보드</h2>
+            <span class="badge bg-danger">ADMIN</span>
+        </div>
+
+        <!-- 탭 네비게이션 -->
+        <ul class="nav nav-tabs mb-4" id="adminTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users-content"
+                    type="button" role="tab">
+                    <i class="bi bi-people-fill me-2"></i>회원 관리
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="posts-tab" data-bs-toggle="tab" data-bs-target="#posts-content"
+                    type="button" role="tab">
+                    <i class="bi bi-file-text-fill me-2"></i>게시글 관리
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="user-activity-tab" data-bs-toggle="tab"
+                    data-bs-target="#user-activity-content" type="button" role="tab">
+                    <i class="bi bi-person-lines-fill me-2"></i>사용자별 조회
+                </button>
+            </li>
+        </ul>
+
+        <!-- 탭 컨텐츠 -->
+        <div class="tab-content" id="adminTabContent">
+            <!-- 회원 관리 탭 -->
+            <div class="tab-pane fade show active" id="users-content" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">전체 회원 목록</h5>
+                            <div>
+                                <label class="me-2">페이지 크기:</label>
+                                <select id="userPageSize" class="form-select form-select-sm d-inline-block w-auto">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>이메일</th>
+                                        <th>닉네임</th>
+                                        <th>가입경로</th>
+                                        <th>역할</th>
+                                        <th>게시글</th>
+                                        <th>댓글</th>
+                                        <th>가입일</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody">
+                                    <tr>
+                                        <td colspan="8" class="text-center">로딩 중...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-controls">
+                            <div>
+                                <span id="userPageInfo"></span>
+                            </div>
+                            <nav>
+                                <ul class="pagination mb-0" id="userPagination"></ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 게시글 관리 탭 -->
+            <div class="tab-pane fade" id="posts-content" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">전체 게시글 목록</h5>
+                            <div>
+                                <label class="me-2">페이지 크기:</label>
+                                <select id="postPageSize" class="form-select form-select-sm d-inline-block w-auto">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>제목</th>
+                                        <th>표시 닉네임</th>
+                                        <th>실제 작성자</th>
+                                        <th>조회수</th>
+                                        <th>작성일</th>
+                                        <th>동작</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="postsTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center">로딩 중...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-controls">
+                            <div>
+                                <span id="postPageInfo"></span>
+                            </div>
+                            <nav>
+                                <ul class="pagination mb-0" id="postPagination"></ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 사용자별 조회 탭 -->
+            <div class="tab-pane fade" id="user-activity-content" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">사용자별 활동 조회</h5>
+                        <div class="mb-3">
+                            <label for="userIdInput" class="form-label">사용자 ID</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="userIdInput"
+                                    placeholder="조회할 사용자 ID를 입력하세요">
+                                <button class="btn btn-primary" type="button" id="searchUserBtn">
+                                    <i class="bi bi-search me-1"></i>조회
+                                </button>
+                            </div>
+                        </div>
+
+                        <ul class="nav nav-pills mb-3" id="userActivityTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="user-posts-tab" data-bs-toggle="tab"
+                                    data-bs-target="#user-posts" type="button" role="tab">
+                                    게시글
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="user-comments-tab" data-bs-toggle="tab"
+                                    data-bs-target="#user-comments" type="button" role="tab">
+                                    댓글
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="userActivityTabContent">
+                            <div class="tab-pane fade show active" id="user-posts" role="tabpanel">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>제목</th>
+                                                <th>표시 닉네임</th>
+                                                <th>조회수</th>
+                                                <th>작성일</th>
+                                                <th>동작</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="userPostsTableBody">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">사용자 ID를 입력하고 조회 버튼을
+                                                    클릭하세요.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="user-comments" role="tabpanel">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>게시글</th>
+                                                <th>표시 닉네임</th>
+                                                <th>내용</th>
+                                                <th>작성일</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="userCommentsTableBody">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">사용자 ID를 입력하고 조회 버튼을
+                                                    클릭하세요.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: footer}"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 현재 페이지 상태
+            let currentUserPage = 0;
+            let currentPostPage = 0;
+            let userPageSize = 20;
+            let postPageSize = 20;
+
+            // 헤더 생성 함수
+            function getHeaders() {
+                const headers = { 'Content-Type': 'application/json' };
+                const token = localStorage.getItem('jwtToken');
+                if (token) {
+                    headers['Authorization'] = 'Bearer ' + token;
+                }
+                return headers;
+            }
+
+            // 날짜 포맷팅 함수
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR');
+            }
+
+            // 전체 회원 목록 로드
+            function loadUsers(page = 0) {
+                fetch(`/api/admin/users?page=${page}&size=${userPageSize}`, {
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('회원 목록을 불러오는데 실패했습니다.');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tbody = document.getElementById('usersTableBody');
+                        if (data.content.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">회원이 없습니다.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = data.content.map(user => `
+                            <tr>
+                                <td>${user.userId}</td>
+                                <td>${user.email}</td>
+                                <td>${user.name}</td>
+                                <td><span class="badge bg-info">${user.provider || 'LOCAL'}</span></td>
+                                <td><span class="badge ${user.role === '관리자' ? 'bg-danger' : 'bg-secondary'}">${user.role}</span></td>
+                                <td><span class="badge bg-primary">${user.postCount}</span></td>
+                                <td><span class="badge bg-success">${user.commentCount}</span></td>
+                                <td>${formatDate(user.createdAt)}</td>
+                            </tr>
+                        `).join('');
+
+                        // 페이지네이션 업데이트
+                        updatePagination('user', data);
+                        currentUserPage = page;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('usersTableBody').innerHTML =
+                            '<tr><td colspan="8" class="text-center text-danger">회원 목록을 불러오는데 실패했습니다.</td></tr>';
+                    });
+            }
+
+            // 전체 게시글 목록 로드
+            function loadPosts(page = 0) {
+                fetch(`/api/admin/posts?page=${page}&size=${postPageSize}`, {
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('게시글 목록을 불러오는데 실패했습니다.');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const tbody = document.getElementById('postsTableBody');
+                        if (data.content.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">게시글이 없습니다.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = data.content.map(post => {
+                            const authorInfo = post.authorInfo ?
+                                `${post.authorInfo.name} (${post.authorInfo.email})` :
+                                '<span class="text-muted">알 수 없음</span>';
+                            return `
+                            <tr>
+                                <td>${post.id}</td>
+                                <td>${post.title}</td>
+                                <td>${post.nickname}</td>
+                                <td>${authorInfo}</td>
+                                <td>${post.viewCount}</td>
+                                <td>${formatDate(post.createdAt)}</td>
+                                <td>
+                                    <a href="/posts/${post.id}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="bi bi-box-arrow-up-right"></i> 상세보기
+                                    </a>
+                                </td>
+                            </tr>
+                        `;
+                        }).join('');
+
+                        // 페이지네이션 업데이트
+                        updatePagination('post', data);
+                        currentPostPage = page;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('postsTableBody').innerHTML =
+                            '<tr><td colspan="7" class="text-center text-danger">게시글 목록을 불러오는데 실패했습니다.</td></tr>';
+                    });
+            }
+
+            // 특정 사용자의 게시글 조회
+            function loadUserPosts(userId) {
+                fetch(`/api/admin/users/${userId}/posts`, {
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('게시글을 불러오는데 실패했습니다.');
+                        return response.json();
+                    })
+                    .then(posts => {
+                        const tbody = document.getElementById('userPostsTableBody');
+                        if (posts.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">작성한 게시글이 없습니다.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = posts.map(post => `
+                            <tr>
+                                <td>${post.id}</td>
+                                <td>${post.title}</td>
+                                <td>${post.nickname}</td>
+                                <td>${post.viewCount}</td>
+                                <td>${formatDate(post.createdAt)}</td>
+                                <td>
+                                    <a href="/posts/${post.id}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="bi bi-box-arrow-up-right"></i> 보기
+                                    </a>
+                                </td>
+                            </tr>
+                        `).join('');
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('userPostsTableBody').innerHTML =
+                            '<tr><td colspan="6" class="text-center text-danger">게시글을 불러오는데 실패했습니다.</td></tr>';
+                    });
+            }
+
+            // 특정 사용자의 댓글 조회
+            function loadUserComments(userId) {
+                fetch(`/api/admin/users/${userId}/comments`, {
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('댓글을 불러오는데 실패했습니다.');
+                        return response.json();
+                    })
+                    .then(comments => {
+                        const tbody = document.getElementById('userCommentsTableBody');
+                        if (comments.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">작성한 댓글이 없습니다.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = comments.map(comment => `
+                            <tr>
+                                <td>${comment.id}</td>
+                                <td>
+                                    <a href="/posts/${comment.postId}" class="text-decoration-none" target="_blank">
+                                        ${comment.postTitle}
+                                    </a>
+                                </td>
+                                <td>${comment.nickname}</td>
+                                <td>${comment.content.substring(0, 50)}${comment.content.length > 50 ? '...' : ''}</td>
+                                <td>${formatDate(comment.createdAt)}</td>
+                            </tr>
+                        `).join('');
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('userCommentsTableBody').innerHTML =
+                            '<tr><td colspan="5" class="text-center text-danger">댓글을 불러오는데 실패했습니다.</td></tr>';
+                    });
+            }
+
+            // 페이지네이션 업데이트
+            function updatePagination(type, data) {
+                const paginationEl = document.getElementById(`${type}Pagination`);
+                const pageInfoEl = document.getElementById(`${type}PageInfo`);
+
+                // 페이지 정보 표시
+                pageInfoEl.textContent = `${data.number + 1} / ${data.totalPages} 페이지 (전체 ${data.totalElements}건)`;
+
+                // 페이지네이션 버튼 생성
+                let html = '';
+
+                // 이전 버튼
+                html += `
+                    <li class="page-item ${data.first ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${data.number - 1}">이전</a>
+                    </li>
+                `;
+
+                // 페이지 번호
+                const startPage = Math.max(0, data.number - 2);
+                const endPage = Math.min(data.totalPages - 1, data.number + 2);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    html += `
+                        <li class="page-item ${i === data.number ? 'active' : ''}">
+                            <a class="page-link" href="#" data-page="${i}">${i + 1}</a>
+                        </li>
+                    `;
+                }
+
+                // 다음 버튼
+                html += `
+                    <li class="page-item ${data.last ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${data.number + 1}">다음</a>
+                    </li>
+                `;
+
+                paginationEl.innerHTML = html;
+
+                // 페이지네이션 클릭 이벤트
+                paginationEl.querySelectorAll('.page-link').forEach(link => {
+                    link.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (!this.parentElement.classList.contains('disabled') &&
+                            !this.parentElement.classList.contains('active')) {
+                            const page = parseInt(this.dataset.page);
+                            if (type === 'user') {
+                                loadUsers(page);
+                            } else if (type === 'post') {
+                                loadPosts(page);
+                            }
+                        }
+                    });
+                });
+            }
+
+            // 페이지 크기 변경 이벤트
+            document.getElementById('userPageSize').addEventListener('change', function () {
+                userPageSize = parseInt(this.value);
+                loadUsers(0);
+            });
+
+            document.getElementById('postPageSize').addEventListener('change', function () {
+                postPageSize = parseInt(this.value);
+                loadPosts(0);
+            });
+
+            // 사용자 조회 버튼
+            document.getElementById('searchUserBtn').addEventListener('click', function () {
+                const userId = document.getElementById('userIdInput').value;
+                if (!userId) {
+                    alert('사용자 ID를 입력해주세요.');
+                    return;
+                }
+                loadUserPosts(userId);
+                loadUserComments(userId);
+            });
+
+            // 탭 전환 이벤트
+            document.getElementById('users-tab').addEventListener('shown.bs.tab', function () {
+                loadUsers(currentUserPage);
+            });
+
+            document.getElementById('posts-tab').addEventListener('shown.bs.tab', function () {
+                loadPosts(currentPostPage);
+            });
+
+            // 초기 로드
+            loadUsers(0);
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

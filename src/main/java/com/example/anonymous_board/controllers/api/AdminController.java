@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+// 관리자 페이지
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -36,6 +37,7 @@ public class AdminController {
     }
 
     // 모든 게시글 목록 (작성자 정보 포함)
+    // 한 페이지에 가져오는 게시글 수 20개
     @GetMapping("/posts")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllPostsWithAuthors(
