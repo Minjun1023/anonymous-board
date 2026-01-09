@@ -25,113 +25,131 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class MessageService {
 
-    private final MessageRepository messageRepository;
-    private final UserRepository userRepository;
-    private final UserConversationRepository userConversationRepository;
+        private final MessageRepository messageRepository;
+        private final UserRepository userRepository;
+        private final UserConversationRepository userConversationRepository;
 
-    public ConversationDto getConversation(Long user1Id, Long user2Id) {
-        Member user1 = userRepository.findById(user1Id)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
-        Member user2 = userRepository.findById(user2Id)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+        // 대화 찾기
+        public ConversationDto getConversation(Long user1Id, Long user2Id) {
+                Member user1 = userRepository.findById(user1Id)
+                                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                Member user2 = userRepository.findById(user2Id)
+                                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
-        List<Message> messages = messageRepository.findConversation(user1, user2);
-        List<MessageDto> messageDtos = messages.stream()
-                .map(MessageDto::from)
-                .collect(Collectors.toList());
+                List<Message> messages = messageRepository.findConversation(user1, user2);
+                List<MessageDto> messageDtos = messages.stream()
+                                .map(MessageDto::from)
+                                .collect(Collectors.toList());
 
-        boolean otherUserHasLeft = userConversationRepository.findByUserAndOtherUser(user2, user1)
-                .map(UserConversation::isHidden)
-                .orElse(false);
+                boolean otherUserHasLeft = userConversationRepository.findByUserAndOtherUser(user2, user1)
+                                .map(UserConversation::isHidden)
+                                .orElse(false);
 
-        return ConversationDto.builder()
-                .messages(messageDtos)
-                .otherUserHasLeft(otherUserHasLeft)
-                .build();
-    }
+                return ConversationDto.builder()
+                                .messages(messageDtos)
+                                .otherUserHasLeft(otherUserHasLeft)
+                                .build();
+        }
 
-    @Transactional
-    public MessageDto sendMessage(Long senderId, MessageCreateRequest request) {
-        Member sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
-        Member receiver = userRepository.findById(request.getReceiverId())
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+        // 메시지 보내기
+        @Transactional
+        public MessageDto sendMessage(Long senderId, MessageCreateRequest request) {
+                Member sender = userRepository.findById(senderId)
+                                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                Member receiver = userRepository.findById(request.getReceiverId())
+                                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
-        Message message = Message.builder()
-                .sender(sender)
-                .receiver(receiver)
-                .content(request.getContent())
-                .build();
+                Message message = Message.builder()
+                                .sender(sender)
+                                .receiver(receiver)
+                                .content(request.getContent())
+                                .build();
 
-        Message savedMessage = messageRepository.save(message);
-        
-        // When a message is sent, the conversation should become visible again for both users
-        unhideConversation(sender, receiver);
-        unhideConversation(receiver, sender);
+                Message savedMessage = messageRepository.save(message);
 
-        return MessageDto.from(savedMessage);
-    }
+                unhideConversation(sender, receiver);
+                unhideConversation(receiver, sender);
 
-    public List<ConversationSummaryDto> getConversationSummaries(Long userId) {
-        Member currentUser = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                return MessageDto.from(savedMessage);
+        }
 
-        List<Message> allMessages = messageRepository.findBySenderOrReceiverOrderByCreatedAtDesc(currentUser, currentUser);
+        // 대화 목록 찾기
+        public List<ConversationSummaryDto> getConversationSummaries(Long userId) {
+                Member currentUser = userRepository.findById(userId)
+                                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
-        Map<Member, List<Message>> conversations = allMessages.stream()
-                .collect(Collectors.groupingBy(message -> {
-                    if (message.getSender().equals(currentUser)) {
-                        return message.getReceiver();
-                    } else {
-                        return message.getSender();
-                    }
-                }));
+                List<Message> allMessages = messageRepository.findBySenderOrReceiverOrderByCreatedAtDesc(currentUser,
+                                currentUser);
 
-        return conversations.entrySet().stream()
-                .filter(entry -> {
-                    Optional<UserConversation> userConversation = userConversationRepository.findByUserAndOtherUser(currentUser, entry.getKey());
-                    return userConversation.map(uc -> !uc.isHidden()).orElse(true);
-                })
-                .map(entry -> {
-                    Member otherUser = entry.getKey();
-                    List<Message> messages = entry.getValue();
-                    Message lastMessage = messages.stream()
-                            .max(Comparator.comparing(Message::getCreatedAt))
-                            .orElse(null);
+                Map<Member, List<Message>> conversations = allMessages.stream()
+                                .collect(Collectors.groupingBy(message -> {
+                                        if (message.getSender().equals(currentUser)) {
+                                                return message.getReceiver();
+                                        } else {
+                                                return message.getSender();
+                                        }
+                                }));
 
-                    return ConversationSummaryDto.builder()
-                            .otherUserId(otherUser.getId())
-                            .otherUserNickname(otherUser.getNickname())
-                            .lastMessageContent(lastMessage != null ? lastMessage.getContent() : "대화 없음")
-                            .lastMessageTime(lastMessage != null ? lastMessage.getCreatedAt() : null)
-                            .hasUnreadMessages(false)
-                            .build();
-                })
-                .sorted(Comparator.comparing(ConversationSummaryDto::getLastMessageTime, Comparator.nullsLast(Comparator.reverseOrder())))
-                .collect(Collectors.toList());
-    }
+                return conversations.entrySet().stream()
+                                .filter(entry -> {
+                                        Optional<UserConversation> userConversation = userConversationRepository
+                                                        .findByUserAndOtherUser(currentUser, entry.getKey());
+                                        return userConversation.map(uc -> !uc.isHidden()).orElse(true);
+                                })
+                                .map(entry -> {
+                                        Member otherUser = entry.getKey();
+                                        List<Message> messages = entry.getValue();
+                                        Message lastMessage = messages.stream()
+                                                        .max(Comparator.comparing(Message::getCreatedAt))
+                                                        .orElse(null);
 
-    @Transactional
-    public void leaveChat(Long userId, Long otherUserId) {
-        Member user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
-        Member otherUser = userRepository.findById(otherUserId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                                        String profileImage = otherUser.getProfileImage();
+                                        if (profileImage != null && !profileImage.startsWith("/profiles/")
+                                                        && !profileImage.startsWith("http")) {
+                                                profileImage = "/profiles/" + profileImage;
+                                        }
 
-        UserConversation userConversation = userConversationRepository.findByUserAndOtherUser(user, otherUser)
-                .orElseGet(() -> UserConversation.builder().user(user).otherUser(otherUser).build());
-        
-        userConversation.hide();
-        userConversationRepository.save(userConversation);
-    }
-    
-    private void unhideConversation(Member user, Member otherUser) {
-        userConversationRepository.findByUserAndOtherUser(user, otherUser)
-            .ifPresent(conversation -> {
-                if (conversation.isHidden()) {
-                    conversation.unhide();
-                    userConversationRepository.save(conversation);
-                }
-            });
-    }
+                                        return ConversationSummaryDto.builder()
+                                                        .otherUserId(otherUser.getId())
+                                                        .otherUserNickname(otherUser.getNickname())
+                                                        .profileImage(profileImage)
+                                                        .lastMessageContent(
+                                                                        lastMessage != null ? lastMessage.getContent()
+                                                                                        : "대화 없음")
+                                                        .lastMessageTime(
+                                                                        lastMessage != null ? lastMessage.getCreatedAt()
+                                                                                        : null)
+                                                        .hasUnreadMessages(false)
+                                                        .build();
+                                })
+                                .sorted(Comparator.comparing(ConversationSummaryDto::getLastMessageTime,
+                                                Comparator.nullsLast(Comparator.reverseOrder())))
+                                .collect(Collectors.toList());
+        }
+
+        // 대화 나가기
+        @Transactional
+        public void leaveChat(Long userId, Long otherUserId) {
+                Member user = userRepository.findById(userId)
+                                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                Member otherUser = userRepository.findById(otherUserId)
+                                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+                UserConversation userConversation = userConversationRepository.findByUserAndOtherUser(user, otherUser)
+                                .orElseGet(() -> UserConversation.builder().user(user).otherUser(otherUser).build());
+
+                userConversation.hide();
+                userConversationRepository.save(userConversation);
+        }
+
+        // 대화 복구
+        private void unhideConversation(Member user, Member otherUser) {
+                userConversationRepository.findByUserAndOtherUser(user, otherUser)
+                                .ifPresent(conversation -> {
+                                        if (conversation.isHidden()) {
+                                                conversation.unhide();
+                                                userConversationRepository.save(conversation);
+                                        }
+                                });
+        }
 }
