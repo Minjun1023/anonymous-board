@@ -20,6 +20,12 @@ public class PageController {
         return "posts/list";
     }
 
+    // 핫 게시판
+    @GetMapping("/posts/hot")
+    public String showHotPostList() {
+        return "posts/hot-posts";
+    }
+
     // 게시글 작성 페이지
     @GetMapping("/posts/write")
     public String showWriteForm() {
@@ -30,6 +36,12 @@ public class PageController {
     @GetMapping("/posts/{id}")
     public String showPostDetail() {
         return "posts/detail";
+    }
+
+    // 게시글 수정 페이지
+    @GetMapping("/posts/{id}/edit")
+    public String showEditForm() {
+        return "posts/edit";
     }
 
     // 로그인 페이지
@@ -43,6 +55,7 @@ public class PageController {
     public String signupPage() {
         return "signup";
     }
+
     // 아이디 찾기
     @GetMapping("/find-id")
     public String findId() {

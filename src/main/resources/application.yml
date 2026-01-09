@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
   thymeleaf:
     prefix: classpath:/templates/
     suffix: .html
@@ -20,7 +24,9 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
+    username: ${GOOGLE_EMAIL}
     password: ${GOOGLE_APP_PASSWORD}
+    properties:
       mail:
         smtp:
           auth: true
@@ -81,3 +87,6 @@ logging:
             sql: trace
       springframework:
         security: DEBUG
+
+server:
+  port: 8080

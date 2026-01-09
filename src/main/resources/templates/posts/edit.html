@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 수정</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .write-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="/">익명 게시판</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/posts">게시글 목록</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container write-container">
+        <h2 class="mb-4">게시글 수정</h2>
+
+        <form id="editForm">
+            <div class="mb-3">
+                <label for="title" class="form-label">제목</label>
+                <input type="text" class="form-control" id="title" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="content" class="form-label">내용</label>
+                <textarea class="form-control" id="content" rows="10" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">기존 이미지 (삭제할 이미지를 선택하세요)</label>
+                <div id="existingImages" class="d-flex flex-wrap gap-3 mb-2">
+                    <!-- 기존 이미지가 여기에 동적으로 추가됩니다 -->
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="file" class="form-label">이미지 추가 (기존 이미지는 유지되며, 추가로 업로드됩니다)</label>
+                <input type="file" class="form-control" id="file" accept="image/*" multiple onchange="updateFileList()">
+                <div id="fileList" class="mt-2 text-muted small"></div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="javascript:history.back()" class="btn btn-secondary">취소</a>
+                <button type="submit" class="btn btn-primary">수정완료</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateFileList() {
+            const fileInput = document.getElementById('file');
+            const fileList = document.getElementById('fileList');
+
+            if (fileInput.files.length === 0) {
+                fileList.textContent = '';
+                return;
+            }
+
+            let fileNames = [];
+            for (let i = 0; i < fileInput.files.length; i++) {
+                fileNames.push(fileInput.files[i].name);
+            }
+            fileList.textContent = '선택된 파일: ' + fileNames.join(', ');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const pathParts = window.location.pathname.split('/');
+            const postId = pathParts[2]; // /posts/{id}/edit
+
+            // 게시글 데이터 로드
+            fetch(`/api/posts/${postId}`, {
+                headers: getHeaders()
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('게시글을 불러올 수 없습니다.');
+                    return response.json();
+                })
+                .then(post => {
+                    document.getElementById('title').value = post.title;
+                    document.getElementById('content').value = post.content;
+
+                    // 기존 이미지 렌더링
+                    const existingImagesContainer = document.getElementById('existingImages');
+                    existingImagesContainer.innerHTML = '';
+                    if (post.images && post.images.length > 0) {
+                        post.images.forEach(image => {
+                            const div = document.createElement('div');
+                            div.className = 'position-relative';
+                            div.style.width = '150px';
+
+                            const img = document.createElement('img');
+                            img.src = image.url;
+                            img.className = 'img-thumbnail';
+                            img.style.width = '100%';
+                            img.style.height = '150px';
+                            img.style.objectFit = 'cover';
+
+                            const checkboxDiv = document.createElement('div');
+                            checkboxDiv.className = 'form-check mt-1 text-center';
+
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.className = 'form-check-input delete-image-checkbox';
+                            checkbox.value = image.id;
+                            checkbox.id = `delete-img-${image.id}`;
+
+                            const label = document.createElement('label');
+                            label.className = 'form-check-label small text-danger';
+                            label.htmlFor = `delete-img-${image.id}`;
+                            label.textContent = '삭제';
+
+                            checkboxDiv.appendChild(checkbox);
+                            checkboxDiv.appendChild(label);
+
+                            div.appendChild(img);
+                            div.appendChild(checkboxDiv);
+                            existingImagesContainer.appendChild(div);
+                        });
+                    } else {
+                        existingImagesContainer.innerHTML = '<p class="text-muted small">첨부된 이미지가 없습니다.</p>';
+                    }
+                })
+                .catch(error => {
+                    alert(error.message);
+                    window.location.href = '/posts';
+                });
+
+            // 수정 폼 제출
+            document.getElementById('editForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const deleteImageIds = Array.from(document.querySelectorAll('.delete-image-checkbox:checked'))
+                    .map(cb => parseInt(cb.value));
+
+                const formData = new FormData();
+                const postData = {
+                    title: document.getElementById('title').value,
+                    content: document.getElementById('content').value,
+                    deleteImageIds: deleteImageIds
+                };
+
+                formData.append('post', new Blob([JSON.stringify(postData)], { type: 'application/json' }));
+
+                const fileInput = document.getElementById('file');
+                if (fileInput.files.length > 0) {
+                    for (let i = 0; i < fileInput.files.length; i++) {
+                        formData.append('files', fileInput.files[i]);
+                    }
+                }
+
+                fetch(`/api/posts/${postId}`, {
+                    method: 'PUT',
+                    headers: getHeaders(null), // Content-Type 자동 설정을 위해 null 전달
+                    body: formData
+                })
+                    .then(async response => {
+                        if (response.ok) {
+                            const message = await response.text();
+                            alert(message);
+                            window.location.href = `/posts/${postId}`;
+                        } else {
+                            return response.text().then(text => { throw new Error(text) });
+                        }
+                    })
+                    .catch(error => {
+                        alert(error.message || '게시글 수정에 실패했습니다.');
+                    });
+            });
+
+            function getHeaders(contentType = 'application/json') {
+                const headers = {};
+                if (contentType) {
+                    headers['Content-Type'] = contentType;
+                }
+
+                const token = localStorage.getItem('jwtToken');
+                if (token) {
+                    headers['Authorization'] = 'Bearer ' + token;
+                }
+                return headers;
+            }
+        });
+    </script>
+</body>
+
+</html>

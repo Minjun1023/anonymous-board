@@ -18,7 +18,8 @@ public class MessageController {
     private final MessageService messageService;
 
     @GetMapping("/{receiverId}")
-    public ResponseEntity<ConversationDto> getConversation(@AuthenticationPrincipal Member member, @PathVariable Long receiverId) {
+    public ResponseEntity<ConversationDto> getConversation(@AuthenticationPrincipal Member member,
+            @PathVariable Long receiverId) {
         if (member == null) {
             return ResponseEntity.status(401).build();
         }
@@ -27,7 +28,8 @@ public class MessageController {
     }
 
     @PostMapping
-    public ResponseEntity<MessageDto> sendMessage(@AuthenticationPrincipal Member member, @RequestBody MessageCreateRequest request) {
+    public ResponseEntity<MessageDto> sendMessage(@AuthenticationPrincipal Member member,
+            @RequestBody MessageCreateRequest request) {
         if (member == null) {
             return ResponseEntity.status(401).build();
         }

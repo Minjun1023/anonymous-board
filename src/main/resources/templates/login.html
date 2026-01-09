@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로그인 - 익명 게시판</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         body {
-            background-color: #f8f9fa;
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
+
         .main-content {
             flex: 1;
             display: flex;
@@ -19,58 +21,72 @@
             justify-content: center;
             padding: 2rem 0;
         }
+
         .login-card {
-            background: white;
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
             border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
             padding: 2rem;
             width: 100%;
             max-width: 400px;
         }
+
         .btn-kakao {
             background-color: #FEE500;
             color: #000000;
             border: none;
         }
+
         .btn-naver {
             background-color: #03C75A;
             color: white;
             border: none;
         }
+
         .btn-google {
-            background-color: white;
-            color: #757575;
-            border: 1px solid #dbdbdb;
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            border: 1px solid var(--bs-border-color);
         }
+
         .login-divider {
             display: flex;
             align-items: center;
             text-align: center;
-            color: #6c757d;
+            color: var(--bs-secondary-color);
             margin: 1.5rem 0;
         }
+
         .login-divider::before,
         .login-divider::after {
             content: '';
             flex: 1;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid var(--bs-border-color);
         }
+
         .login-divider span {
             padding: 0 1rem;
         }
     </style>
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="/">익명 게시판</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav ms-auto align-items-center">
                     <li class="nav-item">
                         <a class="nav-link" href="/posts">게시글 목록</a>
+                    </li>
+                    <li class="nav-item ms-3">
+                        <button id="themeToggle" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-moon-fill" id="themeIcon"></i>
+                        </button>
                     </li>
                 </ul>
             </div>
@@ -89,7 +105,12 @@
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">비밀번호</label>
-                        <input type="password" class="form-control" id="password" required>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary btn-lg">로그인</button>
@@ -104,23 +125,23 @@
                 <div class="login-divider">
                     <span>또는</span>
                 </div>
-                
+
                 <div class="d-grid gap-3">
                     <a href="/oauth2/authorization/kakao" class="btn btn-lg btn-kakao">
                         <img src="https://developers.kakao.com/assets/img/about/logos/kakaotalksharing/kakaotalk_sharing_btn_small.png"
-                             alt="카카오 로그인" height="20" class="me-2">
+                            alt="카카오 로그인" height="20" class="me-2">
                         카카오 로그인
                     </a>
-                    
+
                     <a href="/oauth2/authorization/naver" class="btn btn-lg btn-naver">
-                        <img src="https://static.nid.naver.com/oauth/small_g_in.PNG"
-                             alt="네이버 로그인" height="20" class="me-2">
+                        <img src="https://static.nid.naver.com/oauth/small_g_in.PNG" alt="네이버 로그인" height="20"
+                            class="me-2">
                         네이버 로그인
                     </a>
-                    
+
                     <a href="/oauth2/authorization/google" class="btn btn-lg btn-google">
                         <img src="https://developers.google.com/identity/images/btn_google_signin_light_normal_web.png"
-                             alt="구글 로그인" height="20" class="me-2">
+                            alt="구글 로그인" height="20" class="me-2">
                         구글 로그인
                     </a>
                 </div>
@@ -132,7 +153,7 @@
         </div>
     </div>
 
-    <footer class="bg-light py-4 mt-auto">
+    <footer class="bg-body-tertiary py-4 mt-auto">
         <div class="container">
             <p class="text-center text-muted mb-0">&copy; 2025 익명 게시판. All rights reserved.</p>
         </div>
@@ -140,7 +161,54 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        // 테마 관리
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const html = document.documentElement;
+
+        // 저장된 테마 불러오기
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+        });
+
+        function setTheme(theme) {
+            html.setAttribute('data-bs-theme', theme);
+            localStorage.setItem('theme', theme);
+
+            if (theme === 'dark') {
+                themeIcon.className = 'bi bi-sun-fill';
+                themeToggle.classList.replace('btn-outline-secondary', 'btn-outline-light');
+            } else {
+                themeIcon.className = 'bi bi-moon-fill';
+                themeToggle.classList.replace('btn-outline-light', 'btn-outline-secondary');
+            }
+        }
+
+        // 비밀번호 보기 토글
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        togglePassword.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // 아이콘 변경
+            if (type === 'text') {
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -173,7 +241,7 @@
             }
         });
 
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
             const error = urlParams.get('error');
@@ -186,4 +254,5 @@
         });
     </script>
 </body>
+
 </html>

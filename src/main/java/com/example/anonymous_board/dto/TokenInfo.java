@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TokenInfo {
-    private String grantType;
-    private String accessToken;
-    private String refreshToken;
+    private String grantType; // 토큰 타입
+    private String accessToken; // 액세스 토큰
+    private String refreshToken; // 리프레시 토큰
 }

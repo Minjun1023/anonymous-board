@@ -1,6 +1,5 @@
 package com.example.anonymous_board.config.jwt;
 
-
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.dto.TokenInfo;
 
@@ -9,7 +8,9 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
-import lombok.extern.slf4j.Slf4j;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,6 +18,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.security.Key;
 import java.util.Arrays;
@@ -24,7 +26,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Component
 public class JwtTokenProvider {
 
@@ -45,13 +46,13 @@ public class JwtTokenProvider {
                 .collect(Collectors.joining(","));
 
         long now = (new Date()).getTime();
-        
+
         // principal에서 추가 정보 추출
         Object principal = authentication.getPrincipal();
         String email = null;
         String nickname = null;
         String role = authorities;
-        
+
         if (principal instanceof Member) {
             Member member = (Member) principal;
             email = member.getEmail();
@@ -66,7 +67,7 @@ public class JwtTokenProvider {
             nickname = member.getNickname();
             role = member.getRole().name();
         }
-        
+
         // Access Token 생성 (유효기간: 1일)
         Date accessTokenExpiresIn = new Date(now + 86400000);
         JwtBuilder builder = Jwts.builder()
@@ -74,7 +75,7 @@ public class JwtTokenProvider {
                 .claim("auth", authorities)
                 .setExpiration(accessTokenExpiresIn)
                 .signWith(key, SignatureAlgorithm.HS256);
-        
+
         // 추가 정보가 있으면 포함
         if (email != null) {
             builder.claim("email", email);
@@ -85,7 +86,7 @@ public class JwtTokenProvider {
         if (role != null) {
             builder.claim("role", role);
         }
-        
+
         String accessToken = builder.compact();
 
         // Refresh Token 생성 (유효기간: 1일)
@@ -104,13 +105,12 @@ public class JwtTokenProvider {
     public String getEmail(String token) {
         try {
             Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
             return claims.getSubject();
-        } catch (JwtException e){
-            log.error("JWT 파싱 중 오류 발생: {}", e.getMessage());
+        } catch (JwtException e) {
             return null;
         }
     }
@@ -125,10 +125,9 @@ public class JwtTokenProvider {
         }
 
         // 클레임에서 권한 정보 가져오기
-        Collection<? extends GrantedAuthority> authorities =
-                Arrays.stream(claims.get("auth").toString().split(","))
-                        .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
+        Collection<? extends GrantedAuthority> authorities = Arrays.stream(claims.get("auth").toString().split(","))
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
 
         // 클레임에서 이메일 정보 가져오기
         String email = claims.getSubject();
@@ -143,18 +142,8 @@ public class JwtTokenProvider {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
-            // 보안 정책 또는 형식 이상인 경우
-        } catch (SecurityException | MalformedJwtException e) {
-            log.info("Invalid JWT Token", e);
-            // 만료된 경우
-        } catch (ExpiredJwtException e) {
-            log.info("Expired JWT Token", e);
-            // 지원되지 않는 JWT 형식인 경우
-        } catch (UnsupportedJwtException e) {
-            log.info("Unsupported JWT Token", e);
-            // 비었을 경우
-        } catch (IllegalArgumentException e) {
-            log.info("JWT claims string is empty.", e);
+        } catch (SecurityException | MalformedJwtException | ExpiredJwtException | UnsupportedJwtException
+                | IllegalArgumentException e) {
         }
         return false;
     }
@@ -164,7 +153,30 @@ public class JwtTokenProvider {
         try {
             return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(accessToken).getBody();
         } catch (ExpiredJwtException e) {
-            return e.getClaims();   // 만료되어도 Claims는 반환 가능
+            return e.getClaims(); // 만료되어도 Claims는 반환 가능
         }
+    }
+
+    /**
+     * HTTP 요청에서 JWT 토큰 추출
+     * Authorization 헤더 또는 쿠키에서 토큰을 찾음
+     */
+    public String resolveToken(HttpServletRequest request) {
+        // 1. Authorization 헤더 확인
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+
+        // 2. 쿠키에서 토큰 확인 (access_token 또는 jwt_token)
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("access_token".equals(cookie.getName()) || "jwt_token".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 }

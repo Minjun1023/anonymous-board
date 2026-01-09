@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <title>게시글 목록</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
 </head>
+
 <body>
     <div th:replace="~{fragments/layout :: navigation}"></div>
 
@@ -45,12 +47,12 @@
     <script>
         let currentSort = 'latest';
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             loadPosts();
             checkAuthStatus();
-            
+
             document.querySelectorAll('[data-sort]').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function () {
                     currentSort = this.dataset.sort;
                     document.querySelectorAll('[data-sort]').forEach(btn => btn.classList.remove('active'));
                     this.classList.add('active');
@@ -58,7 +60,7 @@
                 });
             });
 
-            document.addEventListener('userAuthenticated', function() {
+            document.addEventListener('userAuthenticated', function () {
                 document.getElementById('writePostBtnContainer').style.display = 'block';
             });
         });
@@ -68,7 +70,7 @@
                 const response = await fetch('/api/users/me', {
                     credentials: 'include'
                 });
-                
+
                 if (response.ok) {
                     document.getElementById('writePostBtnContainer').style.display = 'block';
                 }
@@ -93,7 +95,7 @@
                 })
                 .then(data => {
                     const container = document.getElementById('postsContainer');
-                    
+
                     if (!data.posts || data.posts.length === 0) {
                         container.innerHTML = '<p class="text-center my-5">게시글이 없습니다.</p>';
                         return;
@@ -106,7 +108,9 @@
                         const nickname = String(post.nickname).replace(/</g, '&lt;').replace(/>/g, '&gt;');
                         const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
                         const date = post.createdAt.substring(0, 16).replace('T', ' ');
-                        
+
+                        const profileImage = post.profileImage || '/profiles/default_profile.png';
+
                         return `
                         <div class="card mb-3">
                             <div class="card-body">
@@ -115,7 +119,10 @@
                                 </h5>
                                 <p class="card-text text-muted">${shortContent}</p>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">작성자: ${nickname}</small>
+                                    <div class="d-flex align-items-center">
+                                        <img src="${profileImage}" alt="Profile" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                        <small class="text-muted">작성자: ${nickname}</small>
+                                    </div>
                                     <div>
                                         <span class="me-3">
                                             <i class="bi bi-hand-thumbs-up"></i> ${post.likes || 0}
@@ -138,12 +145,12 @@
 
                     // 페이지네이션 렌더링
                     const pagination = renderPagination(data);
-                    
+
                     container.innerHTML = postsHtml + pagination;
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('postsContainer').innerHTML = 
+                    document.getElementById('postsContainer').innerHTML =
                         '<div class="alert alert-danger">게시글을 불러오는데 실패했습니다.</div>';
                 });
         }
@@ -152,27 +159,27 @@
             if (data.totalPages <= 1) return '';
 
             let html = '<nav aria-label="Page navigation" class="mt-4"><ul class="pagination justify-content-center">';
-            
+
             // 이전 버튼
             html += `<li class="page-item ${!data.hasPrevious ? 'disabled' : ''}">
                 <a class="page-link" href="#" onclick="loadPosts(${data.currentPage - 1}); return false;">이전</a>
             </li>`;
-            
+
             // 페이지 번호들
             const startPage = Math.max(0, data.currentPage - 2);
             const endPage = Math.min(data.totalPages - 1, data.currentPage + 2);
-            
+
             for (let i = startPage; i <= endPage; i++) {
                 html += `<li class="page-item ${i === data.currentPage ? 'active' : ''}">
                     <a class="page-link" href="#" onclick="loadPosts(${i}); return false;">${i + 1}</a>
                 </li>`;
             }
-            
+
             // 다음 버튼
             html += `<li class="page-item ${!data.hasNext ? 'disabled' : ''}">
                 <a class="page-link" href="#" onclick="loadPosts(${data.currentPage + 1}); return false;">다음</a>
             </li>`;
-            
+
             html += '</ul></nav>';
             return html;
         }
@@ -199,7 +206,7 @@
                 })
                 .then(data => {
                     const container = document.getElementById('postsContainer');
-                    
+
                     if (!data.content || data.content.length === 0) {
                         container.innerHTML = '<p class="text-center my-5">검색 결과가 없습니다.</p>';
                         return;
@@ -211,7 +218,7 @@
                         const nickname = String(post.nickname).replace(/</g, '&lt;').replace(/>/g, '&gt;');
                         const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
                         const date = post.createdAt.substring(0, 16).replace('T', ' ');
-                        
+
                         return `
                         <div class="card mb-3">
                             <div class="card-body">
@@ -246,7 +253,7 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('postsContainer').innerHTML = 
+                    document.getElementById('postsContainer').innerHTML =
                         '<div class="alert alert-danger">검색에 실패했습니다.</div>';
                 });
         }
@@ -255,31 +262,32 @@
             if (data.totalPages <= 1) return '';
 
             let html = '<nav aria-label="Page navigation" class="mt-4"><ul class="pagination justify-content-center">';
-            
+
             html += `<li class="page-item ${data.first ? 'disabled' : ''}">
                 <a class="page-link" href="#" onclick="searchPosts(${data.number - 1}); return false;">이전</a>
             </li>`;
-            
+
             const startPage = Math.max(0, data.number - 2);
             const endPage = Math.min(data.totalPages - 1, data.number + 2);
-            
+
             for (let i = startPage; i <= endPage; i++) {
                 html += `<li class="page-item ${i === data.number ? 'active' : ''}">
                     <a class="page-link" href="#" onclick="searchPosts(${i}); return false;">${i + 1}</a>
                 </li>`;
             }
-            
+
             html += `<li class="page-item ${data.last ? 'disabled' : ''}">
                 <a class="page-link" href="#" onclick="searchPosts(${data.number + 1}); return false;">다음</a>
             </li>`;
-            
+
             html += '</ul></nav>';
             return html;
         }
 
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') searchPosts();
         });
     </script>
 </body>
+
 </html>

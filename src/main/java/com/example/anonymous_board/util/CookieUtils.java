@@ -8,8 +8,9 @@ import org.springframework.util.SerializationUtils;
 import java.util.Base64;
 import java.util.Optional;
 
+// 쿠키 관련 유틸
 public class CookieUtils {
-
+    // 쿠키 가져오기
     public static Optional<Cookie> getCookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
 
@@ -24,6 +25,7 @@ public class CookieUtils {
         return Optional.empty();
     }
 
+    // 쿠키 추가
     public static void addCookie(HttpServletResponse response, String name, String value, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setPath("/");
@@ -32,6 +34,7 @@ public class CookieUtils {
         response.addCookie(cookie);
     }
 
+    // 쿠키 삭제
     public static void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies != null && cookies.length > 0) {
@@ -46,13 +49,15 @@ public class CookieUtils {
         }
     }
 
+    // 쿠키 직렬화
     public static String serialize(Object object) {
         return Base64.getUrlEncoder()
                 .encodeToString(SerializationUtils.serialize(object));
     }
 
+    // 쿠키 역직렬화
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
         return cls.cast(SerializationUtils.deserialize(
-                        Base64.getUrlDecoder().decode(cookie.getValue())));
+                Base64.getUrlDecoder().decode(cookie.getValue())));
     }
 }

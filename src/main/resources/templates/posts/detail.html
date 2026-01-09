@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <title>게시글 상세</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
 </head>
+
 <body>
     <div th:replace="~{fragments/layout :: navigation}"></div>
 
@@ -17,7 +19,8 @@
                     <small class="text-muted d-flex align-items-center">
                         작성자: <span id="postNickname" class="ms-1"></span>
                         <div class="dropdown ms-2" id="authorActionsDropdown">
-                            <button class="btn btn-sm" type="button" id="authorActions" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn btn-sm" type="button" id="authorActions" data-bs-toggle="dropdown"
+                                aria-expanded="false">
                                 <i class="bi bi-gear"></i>
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="authorActions">
@@ -30,9 +33,21 @@
                         <span class="mx-2">|</span>
                         조회수: <span id="postViewCount"></span>
                     </small>
-                    <button id="postDeleteButton" onclick="deletePost()" class="btn btn-outline-danger btn-sm" style="display: none;">삭제</button>
+                    <div id="authorButtons" style="display: none;">
+                        <a id="postEditButton" href="#" class="btn btn-outline-primary btn-sm me-1">수정</a>
+                        <button id="postDeleteButton" onclick="deletePost()"
+                            class="btn btn-outline-danger btn-sm">삭제</button>
+                    </div>
                 </div>
-                <p class="card-text" id="postContent"></p>
+
+                <div id="imageContainer">
+                    <!-- 이미지가 여기에 동적으로 추가됩니다 -->
+                </div>
+                <p class="card-text mt-4" id="postContent" style="white-space: pre-wrap;"></p>
+
+                <!-- 투표 컨테이너 -->
+                <div id="pollContainer" class="mt-4"></div>
+
                 <div class="mt-4 text-center">
                     <button class="btn btn-outline-success me-2" onclick="vote('LIKE')">
                         <i class="bi bi-hand-thumbs-up"></i> 추천 <span id="likesCount">0</span>
@@ -43,36 +58,34 @@
                 </div>
             </div>
         </div>
+        <hr class="my-0">
+        <div class="card-body">
+            <h5 class="card-title mb-4">댓글 <span id="commentCount" class="badge bg-secondary">0</span></h5>
 
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title mb-4">댓글 <span id="commentCount" class="badge bg-secondary">0</span></h5>
+            <div class="mb-4" sec:authorize="isAuthenticated()">
+                <form id="commentForm">
+                    <div class="mb-3">
+                        <textarea class="form-control" id="commentContent" rows="3" placeholder="댓글 내용"
+                            required></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="commentSecret">
+                        <label class="form-check-label" for="commentSecret">비밀 댓글</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">댓글 작성</button>
+                </form>
+            </div>
+            <div class="mb-4" sec:authorize="!isAuthenticated()">
+                <p class="text-muted small mt-2">* 댓글을 작성하려면 <a href="/login">로그인</a>이 필요합니다.</p>
+            </div>
 
-                <div class="mb-4" sec:authorize="isAuthenticated()">
-                    <form id="commentForm">
-                        <div class="mb-3">
-                            <textarea class="form-control" id="commentContent" rows="3" placeholder="댓글 내용" required></textarea>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="commentSecret">
-                            <label class="form-check-label" for="commentSecret">비밀 댓글</label>
-                        </div>
-                        <button type="submit" class="btn btn-primary">댓글 작성</button>
-                    </form>
-                </div>
-                <div class="mb-4" sec:authorize="!isAuthenticated()">
-                     <p class="text-muted small mt-2">* 댓글을 작성하려면 <a href="/login">로그인</a>이 필요합니다.</p>
-                </div>
-
-                <div id="commentsList">
-                    <p class="text-center">로딩 중...</p>
-                </div>
+            <div id="commentsList">
+                <p class="text-center">로딩 중...</p>
             </div>
         </div>
+    </div>
 
-        <div class="mt-3">
-            <a href="/posts" class="btn btn-secondary">목록으로</a>
-        </div>
+    <div class="mt-3">
     </div>
 
     <div th:replace="~{fragments/layout :: footer}"></div>
@@ -81,12 +94,12 @@
         const postId = window.location.pathname.split('/').pop();
         let authorId;
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             loadPost();
-            
+
             const commentForm = document.getElementById('commentForm');
-            if(commentForm) {
-                commentForm.addEventListener('submit', function(e) {
+            if (commentForm) {
+                commentForm.addEventListener('submit', function (e) {
                     e.preventDefault();
                     addComment();
                 });
@@ -104,7 +117,13 @@
                 .then(post => {
                     document.getElementById('postTitle').textContent = post.title;
                     document.getElementById('postContent').textContent = post.content;
-                    document.getElementById('postNickname').textContent = post.nickname;
+                    const profileImage = post.profileImage || '/profiles/default_profile.png';
+                    const nicknameHtml = `
+                        <div class="d-flex align-items-center">
+                            <img src="${profileImage}" alt="Profile" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                            <span>${post.nickname}</span>
+                        </div>`;
+                    document.getElementById('postNickname').innerHTML = nicknameHtml;
                     document.getElementById('postDate').textContent = post.createdAt.substring(0, 16).replace('T', ' ');
                     document.getElementById('postViewCount').textContent = post.viewCount;
                     document.getElementById('likesCount').textContent = post.likes;
@@ -113,9 +132,29 @@
                     document.getElementById('chatLink').href = `/chat/${authorId}`;
                     document.getElementById('authorPostsLink').href = `/profile/posts?userId=${authorId}`;
 
+                    const imageContainer = document.getElementById('imageContainer');
+                    imageContainer.innerHTML = ''; // 기존 이미지 초기화
+
+                    if (post.images && post.images.length > 0) {
+                        post.images.forEach(image => {
+                            const img = document.createElement('img');
+                            img.src = image.url;
+                            img.alt = "게시글 이미지";
+                            img.className = "img-fluid mb-3 rounded d-block"; // mx-auto 제거하여 왼쪽 정렬
+                            img.style.maxHeight = "400px";
+                            img.style.width = "auto"; // width 100% 대신 auto로 변경하여 원본 비율 유지 (너무 크면 max-width 적용됨)
+                            img.style.maxWidth = "100%";
+                            img.style.objectFit = "contain";
+                            imageContainer.appendChild(img);
+                        });
+                    }
+
+                    // 투표 렌더링
+                    renderPoll(post.poll);
 
                     if (post.isOwner) {
-                        document.getElementById('postDeleteButton').style.display = 'block';
+                        document.getElementById('authorButtons').style.display = 'block';
+                        document.getElementById('postEditButton').href = `/posts/${postId}/edit`;
                         document.getElementById('authorActionsDropdown').style.display = 'none';
                     }
 
@@ -128,6 +167,73 @@
                 });
         }
 
+        function renderPoll(poll) {
+            const container = document.getElementById('pollContainer');
+            container.innerHTML = '';
+
+            if (!poll) return;
+
+            const card = document.createElement('div');
+            card.className = 'card mb-4 border-primary';
+
+            const header = document.createElement('div');
+            header.className = 'card-header bg-transparent border-primary';
+            header.innerHTML = `<h5 class="card-title mb-0">📊 ${poll.question}</h5>`;
+
+            const body = document.createElement('div');
+            body.className = 'card-body';
+
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'd-grid gap-2';
+
+            poll.options.forEach(option => {
+                const percent = option.votePercentage.toFixed(1);
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-primary position-relative text-start';
+                btn.onclick = () => votePoll(option.id);
+
+                btn.innerHTML = `
+                    <div class="d-flex justify-content-between position-relative" style="z-index: 1;">
+                        <span>${option.text}</span>
+                        <span>${option.voteCount}표 (${percent}%)</span>
+                    </div>
+                    <div class="position-absolute top-0 start-0 h-100 bg-primary opacity-25" style="width: ${percent}%"></div>
+                `;
+                optionsDiv.appendChild(btn);
+            });
+
+            body.appendChild(optionsDiv);
+            card.appendChild(header);
+            card.appendChild(body);
+            container.appendChild(card);
+        }
+
+        function votePoll(optionId) {
+            fetch(`/api/posts/${postId}/poll/vote`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ optionId: optionId })
+            })
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('로그인이 필요합니다.');
+                        return;
+                    }
+                    if (response.ok) {
+                        loadPost(); // 투표 후 갱신
+                    } else {
+                        return response.text().then(text => { throw new Error(text); });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message || '투표 실패');
+                });
+        }
+
         function vote(voteType) {
             fetch('/api/posts/' + postId + '/vote', {
                 method: 'POST',
@@ -137,29 +243,29 @@
                 },
                 body: JSON.stringify({ voteType: voteType })
             })
-            .then(response => {
-                if (response.status === 401) {
-                    alert('로그인이 필요합니다.');
-                    return Promise.reject('UNAUTHORIZED'); // 에러 전파 방지
-                }
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(text || '투표 처리에 실패했습니다.');
-                    });
-                }
-                return response.text();
-            })
-            .then((result) => {
-                if (result && result !== 'UNAUTHORIZED') {
-                    loadPost(); // 투표 후 게시글 정보 다시 로드하여 카운트 업데이트
-                }
-            })
-            .catch(error => {
-                if (error !== 'UNAUTHORIZED') {
-                    console.error('Error:', error);
-                    alert(error.message);
-                }
-            });
+                .then(response => {
+                    if (response.status === 401) {
+                        alert('로그인이 필요합니다.');
+                        return Promise.reject('UNAUTHORIZED'); // 에러 전파 방지
+                    }
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || '투표 처리에 실패했습니다.');
+                        });
+                    }
+                    return response.json();
+                })
+                .then((result) => {
+                    if (result && result !== 'UNAUTHORIZED') {
+                        loadPost(); // 투표 후 게시글 정보 다시 로드하여 카운트 업데이트
+                    }
+                })
+                .catch(error => {
+                    if (error !== 'UNAUTHORIZED') {
+                        console.error('Error:', error);
+                        alert(error.message);
+                    }
+                });
         }
 
         function loadComments() {
@@ -169,37 +275,137 @@
                 .then(response => response.json())
                 .then(comments => {
                     const container = document.getElementById('commentsList');
-                    document.getElementById('commentCount').textContent = comments.length;
-                    
+                    document.getElementById('commentCount').textContent = countTotalComments(comments);
+
                     if (!comments || comments.length === 0) {
                         container.innerHTML = '<p class="text-muted">아직 댓글이 없습니다.</p>';
                         return;
                     }
 
-                    container.innerHTML = comments.map(comment => {
-                        const nickname = String(comment.nickname).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        const content = String(comment.content).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        const deleteButton = comment.isOwner ?
-                            `<button onclick="deleteComment(${comment.id})" class="btn btn-sm btn-outline-danger">삭제</button>` : '';
-
-                        return '<div class="card mb-3" id="comment-' + comment.id + '">' +
-                            '<div class="card-body">' +
-                                '<div class="d-flex justify-content-between align-items-start">' +
-                                    '<div>' +
-                                        '<strong>' + nickname + '</strong>' +
-                                        (comment.secret ? ' <span class="badge bg-secondary">비밀</span>' : '') +
-                                        '<p class="mb-0 mt-2">' + content + '</p>' +
-                                    '</div>' +
-                                    '<div>' + deleteButton + '</div>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>';
-                    }).join('');
+                    container.innerHTML = comments.map(comment => renderCommentHTML(comment)).join('');
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('commentsList').innerHTML = 
+                    document.getElementById('commentsList').innerHTML =
                         '<p class="text-danger">댓글을 불러오는데 실패했습니다.</p>';
+                });
+        }
+
+        function countTotalComments(comments) {
+            let count = 0;
+            for (let comment of comments) {
+                count++;
+                if (comment.children && comment.children.length > 0) {
+                    count += countTotalComments(comment.children);
+                }
+            }
+            return count;
+        }
+
+        function renderCommentHTML(comment) {
+            const nickname = String(comment.nickname).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const content = String(comment.content).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            const deleteButton = comment.isOwner ?
+                `<button onclick="deleteComment(${comment.id})" class="btn btn-sm btn-outline-danger ms-1">삭제</button>` : '';
+
+            const replyButton = `<button onclick="toggleReplyForm(${comment.id})" class="btn btn-sm btn-outline-secondary ms-1">답글</button>`;
+
+            let html = `
+                <div class="card mb-3" id="comment-${comment.id}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="w-100">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${comment.profileImage || '/profiles/default_profile.png'}" alt="Profile" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                        <strong>${nickname}</strong>
+                                        ${comment.secret ? '<span class="badge bg-secondary ms-2">비밀</span>' : ''}
+                                    </div>
+                                    <div>
+                                        ${replyButton}
+                                        ${deleteButton}
+                                    </div>
+                                </div>
+                                <p class="mb-0 text-break">${content}</p>
+                                
+                                <!-- 답글 작성 폼 (숨김 상태) -->
+                                <div id="reply-form-${comment.id}" class="mt-3" style="display: none;">
+                                    <div class="card card-body bg-light">
+                                        <div class="mb-2">
+                                            <textarea class="form-control" id="reply-content-${comment.id}" rows="2" placeholder="답글을 입력하세요"></textarea>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="reply-secret-${comment.id}">
+                                                <label class="form-check-label" for="reply-secret-${comment.id}">비밀글</label>
+                                            </div>
+                                            <button onclick="addReply(${comment.id})" class="btn btn-sm btn-primary">등록</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            // 자식 댓글(대댓글)이 있는 경우 재귀적으로 렌더링
+            if (comment.children && comment.children.length > 0) {
+                html += `<div class="ms-5 border-start ps-3">`; // 들여쓰기 및 구분선
+                html += comment.children.map(child => renderCommentHTML(child)).join('');
+                html += `</div>`;
+            }
+
+            return html;
+        }
+
+        function toggleReplyForm(commentId) {
+            const form = document.getElementById(`reply-form-${commentId}`);
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+            } else {
+                form.style.display = 'none';
+            }
+        }
+
+        function addReply(parentId) {
+            const content = document.getElementById(`reply-content-${parentId}`).value;
+            const secret = document.getElementById(`reply-secret-${parentId}`).checked;
+
+            if (!content) {
+                alert('답글 내용을 입력해주세요.');
+                return;
+            }
+
+            fetch(`/api/posts/${postId}/comments`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    content: content,
+                    secret: secret,
+                    parentId: parentId
+                })
+            })
+                .then(response => {
+                    if (response.status === 401 || response.status === 403) {
+                        alert('로그인이 필요하거나 권한이 없습니다.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (response.ok) {
+                        loadComments(); // 댓글 목록 새로고침
+                    } else {
+                        return response.json().then(data => {
+                            throw new Error(data.message || '답글 작성에 실패했습니다.');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message);
                 });
         }
 
@@ -215,30 +421,30 @@
             fetch('/api/posts/' + postId + '/comments', {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ content: content, secret: secret })
             })
-            .then(response => {
-                if (response.status === 401 || response.status === 403) {
-                    alert('로그인이 필요하거나 권한이 없습니다.');
-                    window.location.href = '/login';
-                    return;
-                }
-                if (response.ok) {
-                    document.getElementById('commentForm').reset();
-                    loadComments();
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || '댓글 작성에 실패했습니다.');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(error.message);
-            });
+                .then(response => {
+                    if (response.status === 401 || response.status === 403) {
+                        alert('로그인이 필요하거나 권한이 없습니다.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (response.ok) {
+                        document.getElementById('commentForm').reset();
+                        loadComments();
+                    } else {
+                        return response.json().then(data => {
+                            throw new Error(data.message || '댓글 작성에 실패했습니다.');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message);
+                });
         }
 
         function deleteComment(commentId) {
@@ -248,24 +454,24 @@
                 method: 'DELETE',
                 credentials: 'include'
             })
-            .then(response => {
-                if (response.status === 401 || response.status === 403) {
-                    alert('로그인이 필요하거나 권한이 없습니다.');
-                    window.location.href = '/login';
-                    return;
-                }
-                if (response.ok) {
-                    loadComments();
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || '댓글 삭제에 실패했습니다.');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(error.message);
-            });
+                .then(response => {
+                    if (response.status === 401 || response.status === 403) {
+                        alert('로그인이 필요하거나 권한이 없습니다.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (response.ok) {
+                        loadComments();
+                    } else {
+                        return response.json().then(data => {
+                            throw new Error(data.message || '댓글 삭제에 실패했습니다.');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message);
+                });
         }
 
         function deletePost() {
@@ -275,26 +481,28 @@
                 method: 'DELETE',
                 credentials: 'include'
             })
-            .then(response => {
-                if (response.status === 401 || response.status === 403) {
-                    alert('로그인이 필요하거나 권한이 없습니다.');
-                    window.location.href = '/login';
-                    return;
-                }
-                if (response.ok) {
-                    alert('게시글이 삭제되었습니다.');
-                    window.location.href = '/posts';
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || '게시글 삭제에 실패했습니다.');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(error.message);
-            });
+                .then(async response => {
+                    if (response.status === 401 || response.status === 403) {
+                        alert('로그인이 필요하거나 권한이 없습니다.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (response.ok) {
+                        const message = await response.text();
+                        alert(message);
+                        window.location.href = '/posts';
+                    } else {
+                        return response.json().then(data => {
+                            throw new Error(data.message || '게시글 삭제에 실패했습니다.');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message);
+                });
         }
     </script>
 </body>
+
 </html>

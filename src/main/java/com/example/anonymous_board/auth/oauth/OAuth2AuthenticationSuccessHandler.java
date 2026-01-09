@@ -10,7 +10,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -24,21 +25,20 @@ import java.util.Optional;
 
 import static com.example.anonymous_board.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
-    
-    private final JwtTokenProvider jwtTokenProvider;    // JWT 토큰 생성기
-    private final UserRepository userRepository;    // 사용자 정보 조회       
-    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;    // 쿠키 관리
+
+    private final JwtTokenProvider jwtTokenProvider; // JWT 토큰 생성기
+    private final UserRepository userRepository; // 사용자 정보 조회
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository; // 쿠키
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+            Authentication authentication) throws IOException, ServletException {
         String targetUrl = determineTargetUrl(request, response, authentication);
 
         if (response.isCommitted()) {
-            logger.debug("응답이 이미 커밋되었습니다. 리다이렉션이 불가능 합니다. " + targetUrl);
             return;
         }
 
@@ -48,7 +48,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     }
 
     // 로그인 완료 이후 어디로 이동할지 결정 및 JWT 토큰 발급
-    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response,
+            Authentication authentication) {
         // 리다이렉트 URI 가져오기
         Optional<String> redirectUri = CookieUtils.getCookie(request, REDIRECT_URI_PARAM_COOKIE_NAME)
                 .map(Cookie::getValue);
@@ -63,15 +64,14 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .orElseThrow(() -> new IllegalArgumentException("이메일 주소를 가진 사용자를 찾을 수 없습니다: " + email));
 
         // 권한(Role)을 SecurityContext에 다시 세팅할 때 사용
-        Authentication newAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+        Authentication newAuth = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
-                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().getKey()))
-        );
+                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().getKey())));
 
         // JWT 토큰 발급 및 쿠키에 저장
         TokenInfo tokenInfo = jwtTokenProvider.generateToken(newAuth);
-        
+
         // HttpOnly 쿠키 (보안용)
         Cookie httpOnlyCookie = new Cookie("access_token", tokenInfo.getAccessToken());
         httpOnlyCookie.setPath("/");
@@ -79,7 +79,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         httpOnlyCookie.setMaxAge(60 * 60 * 24); // 24시간
         httpOnlyCookie.setSecure(false);
         response.addCookie(httpOnlyCookie);
-        
+
         // JavaScript 접근 가능한 쿠키 (UI 업데이트용)
         Cookie jsCookie = new Cookie("jwt_token", tokenInfo.getAccessToken());
         jsCookie.setPath("/");
@@ -92,6 +92,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         return UriComponentsBuilder.fromUriString(targetUrl)
                 .build().toUriString();
     }
+
     // 소셜 플랫폼마다 이메일 방식을 가져오는 방식을 구하기 위함
     private String getEmailFromOAuth2User(OAuth2User oAuth2User) {
         // Google

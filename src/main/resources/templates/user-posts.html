@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <title th:text="|${user.nickname}님의 작성 글|">작성 글</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
 </head>
+
 <body>
     <div th:replace="~{fragments/layout :: navigation}"></div>
 
@@ -23,7 +25,12 @@
                 </h5>
                 <p class="card-text text-muted" th:text="${#strings.abbreviate(post.content, 100)}"></p>
                 <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted" th:text="|작성자: ${post.nickname}|"></small>
+                    <div class="d-flex align-items-center">
+                        <img th:src="${post.member.profileImage != null ? post.member.profileImage : '/profiles/default_profile.png'}"
+                            alt="Profile" class="rounded-circle me-2"
+                            style="width: 24px; height: 24px; object-fit: cover;">
+                        <small class="text-muted" th:text="|작성자: ${post.nickname}|"></small>
+                    </div>
                     <div>
                         <span class="me-3">
                             <i class="bi bi-hand-thumbs-up"></i> <span th:text="${post.likes}"></span>
@@ -37,7 +44,8 @@
                         <span class="me-3">
                             <i class="bi bi-chat"></i> <span th:text="${post.commentCount}"></span>
                         </span>
-                        <small class="text-muted" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"></small>
+                        <small class="text-muted"
+                            th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"></small>
                     </div>
                 </div>
             </div>
@@ -46,4 +54,5 @@
 
     <div th:replace="~{fragments/layout :: footer}"></div>
 </body>
+
 </html>
