@@ -47,7 +47,8 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
             Member member = userRepository.findByEmail(email).orElse(null);
 
             if (member != null) {
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + member.getRole().name());
+                // Role.getKey()는 이미 "ROLE_ADMIN" 형식을 반환함
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(member.getRole().getKey());
 
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
                         member,

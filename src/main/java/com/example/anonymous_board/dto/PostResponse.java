@@ -30,6 +30,8 @@ public class PostResponse {
     private final List<PostImageResponse> images; // 게시글 이미지 리스트
     private final PollResponse poll; // 게시글 투표 정보
     private final String profileImage; // 게시글 작성자 프로필 이미지
+    @JsonProperty("isAnnouncement")
+    private final boolean isAnnouncement; // 공지사항 여부
 
     public PostResponse(Post post, Member currentUser) {
         this.id = post.getId();
@@ -43,6 +45,7 @@ public class PostResponse {
         this.dislikes = post.getDislikes();
         this.commentCount = post.getCommentCount();
         this.isOwner = (currentUser != null && post.getMember().getId().equals(currentUser.getId()));
+        this.isAnnouncement = post.isAnnouncement();
 
         String image = post.getMember().getProfileImage();
         if (image != null && !image.startsWith("/profiles/") && !image.startsWith("http")) {

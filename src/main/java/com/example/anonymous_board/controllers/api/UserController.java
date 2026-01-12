@@ -138,7 +138,7 @@ public class UserController {
         response.put("email", member.getEmail());
         response.put("nickname", member.getNickname());
         response.put("provider", member.getProvider());
-        response.put("role", member.getRole().name());
+        response.put("role", member.getRole().getKey()); // ROLE_ADMIN 형식으로 반환
 
         return ResponseEntity.ok(response);
     }

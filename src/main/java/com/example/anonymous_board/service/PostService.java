@@ -15,6 +15,7 @@ import com.example.anonymous_board.dto.PostUpdateRequest;
 import com.example.anonymous_board.repository.PollOptionRepository;
 import com.example.anonymous_board.repository.PollVoteRepository;
 import com.example.anonymous_board.repository.PostRepository;
+import com.example.anonymous_board.repository.UserRepository;
 import com.example.anonymous_board.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ public class PostService {
     private final PollVoteRepository pollVoteRepository;
     private final FileStorageService fileStorageService;
     private final HotPostsCacheService hotPostsCacheService;
+    private final UserRepository userRepository;
 
     // 투표
     @Transactional
@@ -74,11 +76,25 @@ public class PostService {
     // 1. 게시글 생성
     @Transactional
     public PostResponse createPost(PostCreateRequest request, List<MultipartFile> files, Member currentUser) {
+        // 데이터베이스에서 최신 사용자 정보 조회 (닉네임 변경 반영)
+        Member latestUser = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
         Post post = new Post();
-        post.setNickname(currentUser.getNickname());
+        post.setNickname(latestUser.getNickname()); // 최신 닉네임 사용
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
-        post.setMember(currentUser); // 실제 작성자 설정
+        post.setMember(latestUser); // 실제 작성자 설정
+
+        // 공지사항 설정 (관리자만 가능)
+        if (request.getIsAnnouncement() != null && request.getIsAnnouncement()) {
+            // 관리자 권한 확인
+            if (!latestUser.getRole().getKey().equals("ROLE_ADMIN")) {
+                throw new IllegalArgumentException("공지사항은 관리자만 작성할 수 있습니다.");
+            }
+            post.setAnnouncement(true);
+        }
+
         // 게시글 저장
         Post savedPost = postRepository.save(post);
 
@@ -143,7 +159,25 @@ public class PostService {
                 break;
         }
 
-        return postRepository.findAll(pageable);
+        // 공지사항과 일반 게시글을 분리하여 조회
+        List<Post> announcements = postRepository.findAnnouncements();
+        Page<Post> regularPosts = postRepository.findNonAnnouncementPosts(pageable);
+
+        // 첫 페이지에만 공지사항을 포함
+        if (page == 0 && !announcements.isEmpty()) {
+            List<Post> combinedPosts = new java.util.ArrayList<>(announcements);
+            combinedPosts.addAll(regularPosts.getContent());
+
+            // 공지사항을 포함한 총 개수 계산
+            long totalElements = announcements.size() + regularPosts.getTotalElements();
+
+            return new org.springframework.data.domain.PageImpl<>(
+                    combinedPosts,
+                    pageable,
+                    totalElements);
+        }
+
+        return regularPosts;
     }
 
     // 3. 게시글 단건 조회
@@ -259,7 +293,25 @@ public class PostService {
     // 8. 게시글 검색 (대소문자 구분 없음, 페이지네이션 지원)
     public Page<Post> searchPosts(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return postRepository.findByTitleContainingOrContentContaining(keyword, keyword, pageable);
+
+        // 검색된 공지사항과 일반 게시글을 분리하여 조회
+        List<Post> announcements = postRepository.findAnnouncementsByKeyword(keyword);
+        Page<Post> regularPosts = postRepository.findNonAnnouncementsByKeyword(keyword, pageable);
+
+        // 첫 페이지에만 공지사항을 포함
+        if (page == 0 && !announcements.isEmpty()) {
+            List<Post> combinedPosts = new java.util.ArrayList<>(announcements);
+            combinedPosts.addAll(regularPosts.getContent());
+
+            long totalElements = announcements.size() + regularPosts.getTotalElements();
+
+            return new org.springframework.data.domain.PageImpl<>(
+                    combinedPosts,
+                    pageable,
+                    totalElements);
+        }
+
+        return regularPosts;
     }
 
     // 9. 핫 게시글 조회 (추천수 또는 비추천수 10 이상)

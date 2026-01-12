@@ -37,6 +37,22 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT p FROM Post p WHERE p.likes >= :minCount OR p.dislikes >= :minCount")
     Page<Post> findHotPosts(@Param("minCount") int minCount, Pageable pageable);
 
+    // 공지사항 조회 (최신순)
+    @Query("SELECT p FROM Post p WHERE p.isAnnouncement = true ORDER BY p.createdAt DESC")
+    List<Post> findAnnouncements();
+
+    // 일반 게시글 조회 (페이징 + 정렬)
+    @Query("SELECT p FROM Post p WHERE p.isAnnouncement = false")
+    Page<Post> findNonAnnouncementPosts(Pageable pageable);
+
+    // 검색 시 공지사항 조회
+    @Query("SELECT p FROM Post p WHERE p.isAnnouncement = true AND (p.title LIKE %:keyword% OR p.content LIKE %:keyword%) ORDER BY p.createdAt DESC")
+    List<Post> findAnnouncementsByKeyword(@Param("keyword") String keyword);
+
+    // 검색 시 일반 게시글 조회
+    @Query("SELECT p FROM Post p WHERE p.isAnnouncement = false AND (p.title LIKE %:keyword% OR p.content LIKE %:keyword%)")
+    Page<Post> findNonAnnouncementsByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
     // 회원 탈퇴 시 게시글 삭제
     @Modifying
     @Query("DELETE FROM Post p WHERE p.member = :member")

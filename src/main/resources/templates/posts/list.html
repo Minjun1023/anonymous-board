@@ -111,11 +111,27 @@
 
                         const profileImage = post.profileImage || '/profiles/default_profile.png';
 
+                        // 공지사항 여부 확인 (디버깅용 로그)
+                        if (post.isAnnouncement) {
+                            console.log('공지사항 게시글 발견:', post.title, 'isAnnouncement:', post.isAnnouncement);
+                        }
+
+                        // 공지사항 여부에 따른 스타일링 (더 눈에 띄게)
+                        const cardClass = post.isAnnouncement
+                            ? 'card mb-3 border-danger border-3 shadow-sm'
+                            : 'card mb-3';
+                        const cardBodyStyle = post.isAnnouncement
+                            ? 'background: linear-gradient(to right, #fff5f5, #ffffff); border-left: 4px solid #dc3545;'
+                            : '';
+                        const announcementBadge = post.isAnnouncement
+                            ? '<span class="badge bg-danger me-2" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="bi bi-megaphone-fill"></i> 공지</span>'
+                            : '';
+
                         return `
-                        <div class="card mb-3">
-                            <div class="card-body">
+                        <div class="${cardClass}">
+                            <div class="card-body" style="${cardBodyStyle}">
                                 <h5 class="card-title">
-                                    <a href="/posts/${post.id}" class="text-decoration-none">${title}</a>
+                                    ${announcementBadge}<a href="/posts/${post.id}" class="text-decoration-none ${post.isAnnouncement ? 'fw-bold' : ''}">${title}</a>
                                 </h5>
                                 <p class="card-text text-muted">${shortContent}</p>
                                 <div class="d-flex justify-content-between align-items-center">
@@ -219,15 +235,31 @@
                         const shortContent = content.length > 100 ? content.substring(0, 100) + '...' : content;
                         const date = post.createdAt.substring(0, 16).replace('T', ' ');
 
+                        const profileImage = post.profileImage || '/profiles/default_profile.png';
+
+                        // 공지사항 여부에 따른 스타일링 (더 눈에 띄게)
+                        const cardClass = post.isAnnouncement
+                            ? 'card mb-3 border-danger border-3 shadow-sm'
+                            : 'card mb-3';
+                        const cardBodyStyle = post.isAnnouncement
+                            ? 'background: linear-gradient(to right, #fff5f5, #ffffff); border-left: 4px solid #dc3545;'
+                            : '';
+                        const announcementBadge = post.isAnnouncement
+                            ? '<span class="badge bg-danger me-2" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="bi bi-megaphone-fill"></i> 공지</span>'
+                            : '';
+
                         return `
-                        <div class="card mb-3">
-                            <div class="card-body">
+                        <div class="${cardClass}">
+                            <div class="card-body" style="${cardBodyStyle}">
                                 <h5 class="card-title">
-                                    <a href="/posts/${post.id}" class="text-decoration-none">${title}</a>
+                                    ${announcementBadge}<a href="/posts/${post.id}" class="text-decoration-none ${post.isAnnouncement ? 'fw-bold' : ''}">${title}</a>
                                 </h5>
                                 <p class="card-text text-muted">${shortContent}</p>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">작성자: ${nickname}</small>
+                                    <div class="d-flex align-items-center">
+                                        <img src="${profileImage}" alt="Profile" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                        <small class="text-muted">작성자: ${nickname}</small>
+                                    </div>
                                     <div>
                                         <span class="me-3">
                                             <i class="bi bi-hand-thumbs-up"></i> ${post.likes || 0}

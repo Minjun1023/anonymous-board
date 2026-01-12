@@ -49,6 +49,14 @@
                     추가</button>
             </div>
 
+            <!-- 관리자 전용 공지사항 체크박스 -->
+            <div id="announcementCheckbox" class="mb-3 form-check" style="display: none;">
+                <input type="checkbox" class="form-check-input" id="isAnnouncement">
+                <label class="form-check-label" for="isAnnouncement">
+                    <strong class="text-danger">공지사항으로 등록</strong> (관리자 전용)
+                </label>
+            </div>
+
             <div class="d-flex justify-content-between">
                 <button type="button" class="btn btn-secondary" onclick="history.back()">취소</button>
                 <button type="submit" class="btn btn-primary">작성하기</button>
@@ -90,6 +98,25 @@
             container.appendChild(div);
         }
 
+        // 페이지 로드 시 관리자 여부 확인
+        document.addEventListener('DOMContentLoaded', async function () {
+            try {
+                const response = await fetch('/api/users/me', {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    // 관리자인 경우 공지사항 체크박스 표시
+                    if (user.role === 'ROLE_ADMIN') {
+                        document.getElementById('announcementCheckbox').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check admin status:', error);
+            }
+        });
+
         document.getElementById('writeForm').addEventListener('submit', function (e) {
             e.preventDefault();
 
@@ -119,6 +146,12 @@
 
                 postData.pollQuestion = question;
                 postData.pollOptions = options;
+            }
+
+            // 공지사항 데이터 추가 (관리자만)
+            const isAnnouncementCheckbox = document.getElementById('isAnnouncement');
+            if (isAnnouncementCheckbox && isAnnouncementCheckbox.checked) {
+                postData.isAnnouncement = true;
             }
 
             // JSON 데이터를 Blob으로 변환하여 'post' 파트로 추가

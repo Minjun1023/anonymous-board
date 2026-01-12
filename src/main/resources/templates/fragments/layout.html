@@ -172,14 +172,13 @@
 
                     if (response.ok) {
                         const user = await response.json();
-                        console.log('User authenticated:', user);
 
                         // 로그인 상태 UI 표시
                         if (authNav) authNav.style.display = 'flex';
                         if (guestNav) guestNav.style.display = 'none';
 
-                        // 관리자인 경우 관리자 메뉴 표시
-                        if (user.role === 'ADMIN' && adminNav) {
+                        // 관리자인 경우 관리자 메뉴 표시 (ROLE_ADMIN 또는 ADMIN 모두 지원)
+                        if ((user.role === 'ROLE_ADMIN' || user.role === 'ADMIN') && adminNav) {
                             adminNav.style.display = 'block';
                         }
 

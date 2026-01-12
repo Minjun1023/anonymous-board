@@ -74,6 +74,9 @@ public class SecurityConfig {
                                                 // 조회만 허용
                                                 .requestMatchers(HttpMethod.GET, "/api/posts/**", "/api/comments/**")
                                                 .permitAll()
+                                                // 관리자 페이지는 ADMIN 권한 필요
+                                                .requestMatchers("/admin", "/admin/**")
+                                                .hasRole("ADMIN")
                                                 // 그 외 모든 요청은 인증 필요
                                                 .anyRequest().authenticated())
                                 // 인증 예외 처리 (API는 JSON 에러, 페이지는 리다이렉트)

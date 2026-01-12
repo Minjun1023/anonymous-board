@@ -19,4 +19,5 @@ public class PostCreateRequest {
     private String pollQuestion; // 투표 질문
     private java.util.List<String> pollOptions; // 투표 옵션 리스트
     private String password; // 게시글 비밀번호
+    private Boolean isAnnouncement = false; // 공지사항 여부 (관리자 전용)
 }

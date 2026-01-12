@@ -205,24 +205,21 @@ public class UserService implements UserDetailsService {
      */
     @Transactional
     public void updateNickname(Member user, String newNickname) {
-        // 현재 닉네임과 동일하면 변경할 필요 없음
-        if (user.getNickname().equals(newNickname)) {
-            return;
+        // 닉네임 중복 확인
+        if (userRepository.findByNickname(newNickname).isPresent()) {
+            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
         }
 
-        // 닉네임 중복 검사 (다른 사용자가 사용 중인지 확인)
-        userRepository.findByNickname(newNickname).ifPresent(existingUser -> {
-            if (!existingUser.getId().equals(user.getId())) {
-                throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
-            }
-        });
+        // 이메일로 조회하여 최신 상태 확보
+        Member memberToUpdate = userRepository.findByEmail(user.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // 사용자 닉네임 변경
-        user.updateNickname(newNickname);
+        // 사용자 닉네임만 변경 (게시글과 댓글의 닉네임은 작성 당시의 닉네임으로 유지)
+        memberToUpdate.updateNickname(newNickname);
+        userRepository.save(memberToUpdate);
 
-        // 작성한 게시글 및 댓글의 닉네임도 일괄 변경
-        postRepository.updateNicknameByMember(user, newNickname);
-        commentRepository.updateNicknameByMember(user, newNickname);
+        // 게시글과 댓글의 닉네임은 변경하지 않음
+        // 각 게시글/댓글은 작성 당시의 닉네임을 유지해야 함
     }
 
     /**

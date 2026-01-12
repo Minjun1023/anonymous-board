@@ -115,7 +115,11 @@
                     return response.json();
                 })
                 .then(post => {
-                    document.getElementById('postTitle').textContent = post.title;
+                    // 공지사항 배지 추가 (더 눈에 띄게)
+                    const announcementBadge = post.isAnnouncement
+                        ? '<span class="badge bg-danger me-2" style="font-size: 1rem; padding: 0.5rem 1rem;"><i class="bi bi-megaphone-fill"></i> 공지사항</span>'
+                        : '';
+                    document.getElementById('postTitle').innerHTML = announcementBadge + post.title;
                     document.getElementById('postContent').textContent = post.content;
                     const profileImage = post.profileImage || '/profiles/default_profile.png';
                     const nicknameHtml = `
