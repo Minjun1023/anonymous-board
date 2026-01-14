@@ -65,6 +65,18 @@
                     <i class="bi bi-person-lines-fill me-2"></i>사용자별 조회
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reports-tab" data-bs-toggle="tab" data-bs-target="#reports-content"
+                    type="button" role="tab">
+                    <i class="bi bi-flag-fill me-2"></i>신고 관리
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="inquiries-tab" data-bs-toggle="tab" data-bs-target="#inquiries-content"
+                    type="button" role="tab">
+                    <i class="bi bi-question-circle-fill me-2"></i>문의 관리
+                </button>
+            </li>
         </ul>
 
         <!-- 탭 컨텐츠 -->
@@ -93,14 +105,17 @@
                                         <th>닉네임</th>
                                         <th>가입경로</th>
                                         <th>역할</th>
+                                        <th>정지 상태</th>
+                                        <th>정지 해제일</th>
                                         <th>게시글</th>
                                         <th>댓글</th>
                                         <th>가입일</th>
+                                        <th>동작</th>
                                     </tr>
                                 </thead>
                                 <tbody id="usersTableBody">
                                     <tr>
-                                        <td colspan="8" class="text-center">로딩 중...</td>
+                                        <td colspan="11" class="text-center">로딩 중...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -243,6 +258,181 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 신고 관리 탭 -->
+            <div class="tab-pane fade" id="reports-content" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="card-title mb-0">신고 관리</h5>
+                            <div>
+                                <label class="me-2">상태:</label>
+                                <select id="reportStatusFilter"
+                                    class="form-select form-select-sm d-inline-block w-auto">
+                                    <option value="">전체</option>
+                                    <option value="PENDING">대기중</option>
+                                    <option value="REVIEWED">검토됨</option>
+                                    <option value="RESOLVED">해결됨</option>
+                                    <option value="REJECTED">기각됨</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>신고자</th>
+                                        <th>신고대상</th>
+                                        <th>사유</th>
+                                        <th>상태</th>
+                                        <th>신고일</th>
+                                        <th>동작</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reportsTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center">로딩 중...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-controls">
+                            <div>
+                                <span id="reportPageInfo"></span>
+                            </div>
+                            <nav>
+                                <ul class="pagination mb-0" id="reportPagination"></ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 문의 관리 탭 -->
+    <div class="tab-pane fade" id="inquiries-content" role="tabpanel">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">문의 관리</h5>
+                    <div>
+                        <select class="form-select form-select-sm" id="inquiryStatusFilter" onchange="loadInquiries()">
+                            <option value="">전체 상태</option>
+                            <option value="PENDING">대기 중</option>
+                            <option value="ANSWERED">답변 완료</option>
+                            <option value="CLOSED">종료</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>제목</th>
+                                <th>사용자</th>
+                                <th>상태</th>
+                                <th>등록일</th>
+                                <th>답변일</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inquiriesTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center">로딩 중...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 신고 처리 모달 -->
+    <div class="modal fade" id="processReportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">신고 처리</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">처리 상태</label>
+                        <select class="form-select" id="reportStatus">
+                            <option value="RESOLVED">해결됨</option>
+                            <option value="REJECTED">기각됨</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">관리자 메모</label>
+                        <textarea class="form-control" id="adminNotes" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="suspendUser">
+                            <label class="form-check-label" for="suspendUser">
+                                사용자 정지
+                            </label>
+                        </div>
+                    </div>
+                    <div id="suspensionOptions" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">정지 기간 (일)</label>
+                            <input type="number" class="form-control" id="suspendDays" placeholder="영구 정지는 비워두세요">
+                            <small class="text-muted">일수를 입력하지 않으면 영구 정지됩니다</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">정지 사유</label>
+                            <textarea class="form-control" id="suspensionReason" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="submitReportProcess">처리</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 문의 응답 모달 -->
+    <div class="modal fade" id="respondInquiryModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">문의 상세 및 답변</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">제목</label>
+                        <p id="inquiryDetailTitle"></p>
+                    </div>
+                    <div class="mb3">
+                        <label class="form-label fw-bold">문의 내용</label>
+                        <p id="inquiryDetailContent" style="white-space: pre-wrap;"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">사용자 정보</label>
+                        <p id="inquiryDetailUser"></p>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="adminResponseText" class="form-label fw-bold">관리자 답변</label>
+                        <textarea class="form-control" id="adminResponseText" rows="5" placeholder="답변 내용을 입력하세요"
+                            maxlength="2000"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="submitInquiryResponse()">
+                        <i class="bi bi-send"></i> 답변 제출
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -284,23 +474,48 @@
                     })
                     .then(data => {
                         const tbody = document.getElementById('usersTableBody');
-                        if (data.content.length === 0) {
-                            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">회원이 없습니다.</td></tr>';
+
+                        // 관리자를 제외한 사용자만 필터링
+                        const regularUsers = data.content.filter(user => user.role !== '관리자');
+
+                        if (regularUsers.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">회원이 없습니다.</td></tr>';
                             return;
                         }
 
-                        tbody.innerHTML = data.content.map(user => `
+                        tbody.innerHTML = regularUsers.map(user => {
+                            const suspendedBadge = user.suspended ?
+                                `<span class="badge bg-danger">정지됨</span>` :
+                                `<span class="badge bg-success">정상</span>`;
+
+                            // 정지 해제 예정일 표시
+                            let suspendUntilText = '-';
+                            if (user.suspended && user.suspendedUntil) {
+                                suspendUntilText = formatDate(user.suspendedUntil);
+                            } else if (user.suspended) {
+                                suspendUntilText = '<span class="badge bg-dark">영구 정지</span>';
+                            }
+
+                            const suspendBtn = user.suspended ?
+                                `<button class="btn btn-sm btn-success" onclick="unsuspendUser(${user.userId}, '${user.name}')">정지 해제</button>` :
+                                `<button class="btn btn-sm btn-warning" onclick="showSuspendModal(${user.userId}, '${user.name}')">정지</button>`;
+
+                            return `
                             <tr>
                                 <td>${user.userId}</td>
                                 <td>${user.email}</td>
                                 <td>${user.name}</td>
                                 <td><span class="badge bg-info">${user.provider || 'LOCAL'}</span></td>
                                 <td><span class="badge ${user.role === '관리자' ? 'bg-danger' : 'bg-secondary'}">${user.role}</span></td>
+                                <td>${suspendedBadge}</td>
+                                <td>${suspendUntilText}</td>
                                 <td><span class="badge bg-primary">${user.postCount}</span></td>
                                 <td><span class="badge bg-success">${user.commentCount}</span></td>
                                 <td>${formatDate(user.createdAt)}</td>
+                                <td>${suspendBtn}</td>
                             </tr>
-                        `).join('');
+                        `;
+                        }).join('');
 
                         // 페이지네이션 업데이트
                         updatePagination('user', data);
@@ -309,7 +524,7 @@
                     .catch(error => {
                         console.error('Error:', error);
                         document.getElementById('usersTableBody').innerHTML =
-                            '<tr><td colspan="8" class="text-center text-danger">회원 목록을 불러오는데 실패했습니다.</td></tr>';
+                            '<tr><td colspan="11" class="text-center text-danger">회원 목록을 불러오는데 실패했습니다.</td></tr>';
                     });
             }
 
@@ -528,6 +743,285 @@
 
             // 초기 로드
             loadUsers(0);
+
+            // 사용자 정지 모달 표시 (간단 구현)
+            window.showSuspendModal = function (userId, username) {
+                const days = prompt(`${username} 사용자를 정지하시겠습니까?\n정지 기간(일)을 입력하세요 (영구 정지는 빈칸):`);
+                if (days === null) return;
+
+                const reason = prompt('정지 사유를 입력하세요:');
+                if (!reason) {
+                    alert('정지 사유를 입력해야 합니다.');
+                    return;
+                }
+
+                fetch(`/api/admin/users/${userId}/suspend`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        suspendDays: days ? parseInt(days) : null,
+                        reason: reason
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message || '사용자가 정지되었습니다.');
+                        loadUsers(currentUserPage);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('정지 처리 중 오류가 발생했습니다.');
+                    });
+            };
+
+            // 사용자 정지 해제
+            window.unsuspendUser = function (userId) {
+                if (!confirm('정지를 해제하시겠습니까?')) return;
+
+                fetch(`/api/admin/users/${userId}/unsuspend`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message || '정지가 해제되었습니다.');
+                        loadUsers(currentUserPage);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('해제 처리 중 오류가 발생했습니다.');
+                    });
+            };
+
+            // 신고 목록 로드
+            function loadReports(status = '') {
+                const url = status ?
+                    `/api/admin/reports?status=${status}` :
+                    `/api/admin/reports`;
+
+                fetch(url, {
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        const tbody = document.getElementById('reportsTableBody');
+                        if (data.content.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">신고가 없습니다.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = data.content.map(report => {
+                            const statusBadge = {
+                                'PENDING': '<span class="badge bg-warning">대기중</span>',
+                                'REVIEWED': '<span class="badge bg-info">검토됨</span>',
+                                'RESOLVED': '<span class="badge bg-success">해결됨</span>',
+                                'REJECTED': '<span class="badge bg-secondary">기각됨</span>'
+                            }[report.status];
+
+                            const target = report.reportedPostTitle || report.reportedUserNickname || '알 수 없음';
+
+                            return `
+                            <tr>
+                                <td>${report.id}</td>
+                                <td>${report.reporterNickname}</td>
+                                <td>${target}</td>
+                                <td>${report.reason.substring(0, 30)}...</td>
+                                <td>${statusBadge}</td>
+                                <td>${formatDate(report.createdAt)}</td>
+                                <td>
+                                    ${report.status === 'PENDING' ?
+                                    `<button class="btn btn-sm btn-primary" onclick="processReport(${report.id})">처리</button>` :
+                                    '<span class="text-muted">처리완료</span>'}
+                                </td>
+                            </tr>
+                        `;
+                        }).join('');
+
+                        if (data.totalPages) {
+                            updatePagination('report', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('reportsTableBody').innerHTML =
+                            '<tr><td colspan="7" class="text-center text-danger">신고 목록을 불러오는데 실패했습니다.</td></tr>';
+                    });
+            }
+
+            // 신고 처리 (간단 구현)
+            window.processReport = function (reportId) {
+                const action = confirm('이 신고를 해결 처리하시겠습니까?\n취소를 누르면 기각됩니다.');
+                const status = action ? 'RESOLVED' : 'REJECTED';
+                const notes = prompt('관리자 메모를 입력하세요:') || '';
+
+                fetch(`/api/admin/reports/${reportId}/process`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: getHeaders(),
+                    body: JSON.stringify({
+                        status: status,
+                        adminNotes: notes,
+                        suspendUser: false
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert('신고가 처리되었습니다.');
+                        loadReports(document.getElementById('reportStatusFilter').value);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('처리 중 오류가 발생했습니다.');
+                    });
+            };
+
+            // 신고 상태 필터 변경
+            document.getElementById('reportStatusFilter').addEventListener('change', function () {
+                loadReports(this.value);
+            });
+
+            // 신고 탭 클릭 이벤트
+            document.getElementById('reports-tab').addEventListener('shown.bs.tab', function () {
+                loadReports();
+            });
+
+            // 문의 관리 탭 표시 시
+            document.getElementById('inquiries-tab').addEventListener('shown.bs.tab', function () {
+                loadInquiries();
+            });
+
+            // 정지 옵션 토글
+            document.getElementById('suspendUser').addEventListener('change', function () {
+                document.getElementById('suspensionOptions').style.display =
+                    this.checked ? 'block' : 'none';
+            });
+
+            // 문의 관리 관련 변수
+            let currentInquiryId = null;
+
+            // 문의 목록 로드
+            window.loadInquiries = function () {
+                const status = document.getElementById('inquiryStatusFilter').value;
+                let url = '/api/admin/inquiries';
+                if (status) {
+                    url += `?status=${status}`;
+                }
+
+                fetch(url, {
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => response.json())
+                    .then(inquiries => {
+                        const tbody = document.getElementById('inquiriesTableBody');
+                        if (inquiries.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="7" class="text-center">문의가 없습니다.</td></tr>';
+                            return;
+                        }
+
+                        tbody.innerHTML = inquiries.map(inq => `
+                            <tr>
+                                <td>${inq.id}</td>
+                                <td>${inq.title}</td>
+                                <td>${inq.userNickname} (${inq.userEmail})</td>
+                                <td>
+                                    ${inq.status === 'PENDING' ? '<span class="badge bg-warning">대기 중</span>' :
+                                inq.status === 'ANSWERED' ? '<span class="badge bg-success">답변 완료</span>' :
+                                    '<span class="badge bg-secondary">종료</span>'}
+                                </td>
+                                <td>${formatDate(inq.createdAt)}</td>
+                                <td>${inq.respondedAt ? formatDate(inq.respondedAt) : '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="showInquiryDetail(${inq.id})">
+                                        ${inq.status === 'PENDING' ? '답변하기' : '상세보기'}
+                                    </button>
+                                    ${inq.status === 'ANSWERED' ?
+                                `<button class="btn btn-sm btn-secondary" onclick="closeInquiry(${inq.id})">종료</button>` : ''}
+                                </td>
+                            </tr>
+                        `).join('');
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('inquiriesTableBody').innerHTML =
+                            '<tr><td colspan="7" class="text-center text-danger">로드 실패</td></tr>';
+                    });
+            };
+
+            // 문의 상세 보기 및 답변하기
+            window.showInquiryDetail = function (inquiryId) {
+                fetch(`/api/admin/inquiries`, {
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => response.json())
+                    .then(inquiries => {
+                        const inquiry = inquiries.find(inq => inq.id === inquiryId);
+                        if (!inquiry) return;
+
+                        currentInquiryId = inquiryId;
+                        document.getElementById('inquiryDetailTitle').textContent = inquiry.title;
+                        document.getElementById('inquiryDetailContent').textContent = inquiry.content;
+                        document.getElementById('inquiryDetailUser').textContent =
+                            `${inquiry.userNickname} (${inquiry.userEmail}) - ID: ${inquiry.userId}`;
+                        document.getElementById('adminResponseText').value = inquiry.adminResponse || '';
+
+                        const modal = new bootstrap.Modal(document.getElementById('respondInquiryModal'));
+                        modal.show();
+                    });
+            };
+
+            // 문의 답변 제출
+            window.submitInquiryResponse = function () {
+                if (!currentInquiryId) return;
+
+                const response = document.getElementById('adminResponseText').value.trim();
+                if (!response) {
+                    alert('답변 내용을 입력해주세요.');
+                    return;
+                }
+
+                fetch(`/api/admin/inquiries/${currentInquiryId}/respond`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ adminResponse: response })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message || '답변이 등록되었습니다.');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('respondInquiryModal'));
+                        modal.hide();
+                        loadInquiries();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('답변 등록에 실패했습니다.');
+                    });
+            };
+
+            // 문의 종료
+            window.closeInquiry = function (inquiryId) {
+                if (!confirm('문의를 종료하시겠습니까?')) return;
+
+                fetch(`/api/admin/inquiries/${inquiryId}/status?status=CLOSED`, {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: getHeaders()
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message || '상태가 변경되었습니다.');
+                        loadInquiries();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('상태 변경에 실패했습니다.');
+                    });
+            };
         });
     </script>
 
