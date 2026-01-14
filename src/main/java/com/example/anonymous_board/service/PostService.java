@@ -138,29 +138,19 @@ public class PostService {
 
     // 2-1. 게시글 전체 조회 (정렬 및 페이지네이션)
     public Page<Post> getAllPosts(int page, int size, String sortBy) {
+        // 공지사항 조회
+        List<Post> announcements = postRepository.findAnnouncements();
+
         Pageable pageable;
 
-        switch (sortBy) {
-            case "likes":
-                pageable = PageRequest.of(page, size, Sort.by("likes").descending());
-                break;
-            case "dislikes":
-                pageable = PageRequest.of(page, size, Sort.by("dislikes").descending());
-                break;
-            case "viewCount":
-                pageable = PageRequest.of(page, size, Sort.by("viewCount").descending());
-                break;
-            case "comments":
-                pageable = PageRequest.of(page, size, Sort.by("commentCount").descending());
-                break;
-            case "latest":
-            default:
-                pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-                break;
+        // 첫 페이지에서 공지사항을 포함하는 경우, 일반 게시글 사이즈 조정
+        if (page == 0 && !announcements.isEmpty()) {
+            int adjustedSize = Math.max(1, size - announcements.size());
+            pageable = createPageable(page, adjustedSize, sortBy);
+        } else {
+            pageable = createPageable(page, size, sortBy);
         }
 
-        // 공지사항과 일반 게시글을 분리하여 조회
-        List<Post> announcements = postRepository.findAnnouncements();
         Page<Post> regularPosts = postRepository.findNonAnnouncementPosts(pageable);
 
         // 첫 페이지에만 공지사항을 포함
@@ -173,11 +163,27 @@ public class PostService {
 
             return new org.springframework.data.domain.PageImpl<>(
                     combinedPosts,
-                    pageable,
+                    PageRequest.of(page, size),
                     totalElements);
         }
 
         return regularPosts;
+    }
+
+    private Pageable createPageable(int page, int size, String sortBy) {
+        switch (sortBy) {
+            case "likes":
+                return PageRequest.of(page, size, Sort.by("likes").descending());
+            case "dislikes":
+                return PageRequest.of(page, size, Sort.by("dislikes").descending());
+            case "viewCount":
+                return PageRequest.of(page, size, Sort.by("viewCount").descending());
+            case "comments":
+                return PageRequest.of(page, size, Sort.by("commentCount").descending());
+            case "latest":
+            default:
+                return PageRequest.of(page, size, Sort.by("createdAt").descending());
+        }
     }
 
     // 3. 게시글 단건 조회

@@ -100,6 +100,24 @@
 
         // 페이지 로드 시 관리자 여부 확인
         document.addEventListener('DOMContentLoaded', async function () {
+            // 커스텀 검증 메시지 설정
+            const titleInput = document.getElementById('title');
+            const contentInput = document.getElementById('content');
+
+            titleInput.oninvalid = function (e) {
+                e.target.setCustomValidity('제목을 입력해주세요.');
+            };
+            titleInput.oninput = function (e) {
+                e.target.setCustomValidity('');
+            };
+
+            contentInput.oninvalid = function (e) {
+                e.target.setCustomValidity('내용을 입력해주세요.');
+            };
+            contentInput.oninput = function (e) {
+                e.target.setCustomValidity('');
+            };
+
             try {
                 const response = await fetch('/api/users/me', {
                     credentials: 'include'
@@ -177,12 +195,12 @@
                         return;
                     }
                     if (response.ok) {
-                        const message = await response.text();
-                        alert(message);
+                        const data = await response.json();
+                        alert(data.message || '게시글이 작성되었습니다.');
                         window.location.href = '/posts';
                     } else {
-                        return response.text().then(text => {
-                            throw new Error(text || '게시글 작성에 실패했습니다.');
+                        return response.json().then(data => {
+                            throw new Error(data.message || '게시글 작성에 실패했습니다.');
                         });
                     }
                 })

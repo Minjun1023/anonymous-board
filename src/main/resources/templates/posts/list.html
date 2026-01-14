@@ -6,6 +6,17 @@
     <title>게시글 목록</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .announcement-card-body {
+            background: linear-gradient(to right, #fff5f5, #ffffff);
+            border-left: 4px solid #dc3545;
+        }
+
+        [data-bs-theme="dark"] .announcement-card-body {
+            background: linear-gradient(to right, #391114, #212529);
+            border-left: 4px solid #dc3545;
+        }
+    </style>
 </head>
 
 <body>
@@ -86,6 +97,8 @@
                 sortBy: currentSort
             });
 
+            console.log('Loading posts - Page:', page, 'Size:', size, 'Sort:', currentSort);
+
             fetch('/api/posts?' + params.toString(), {
                 credentials: 'include'
             })
@@ -94,6 +107,10 @@
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Received data:', data);
+                    console.log('Posts array:', data.posts);
+                    console.log('Current page:', data.currentPage, 'Total pages:', data.totalPages);
+
                     const container = document.getElementById('postsContainer');
 
                     if (!data.posts || data.posts.length === 0) {
@@ -120,16 +137,16 @@
                         const cardClass = post.isAnnouncement
                             ? 'card mb-3 border-danger border-3 shadow-sm'
                             : 'card mb-3';
-                        const cardBodyStyle = post.isAnnouncement
-                            ? 'background: linear-gradient(to right, #fff5f5, #ffffff); border-left: 4px solid #dc3545;'
-                            : '';
+                        const cardBodyClass = post.isAnnouncement
+                            ? 'card-body announcement-card-body'
+                            : 'card-body';
                         const announcementBadge = post.isAnnouncement
                             ? '<span class="badge bg-danger me-2" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="bi bi-megaphone-fill"></i> 공지</span>'
                             : '';
 
                         return `
                         <div class="${cardClass}">
-                            <div class="card-body" style="${cardBodyStyle}">
+                            <div class="${cardBodyClass}">
                                 <h5 class="card-title">
                                     ${announcementBadge}<a href="/posts/${post.id}" class="text-decoration-none ${post.isAnnouncement ? 'fw-bold' : ''}">${title}</a>
                                 </h5>
@@ -319,6 +336,96 @@
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') searchPosts();
         });
+    </script>
+
+    <!-- Floating Inquiry Button (only for authenticated users) -->
+    <div sec:authorize="isAuthenticated()" style="position: fixed; bottom: 30px; right: 30px; z-index: 1000;">
+        <button class="btn btn-primary btn-lg rounded-circle shadow" data-bs-toggle="modal"
+            data-bs-target="#inquiryModal" style="width: 60px; height: 60px; padding: 0;">
+            <i class="bi bi-question-circle" style="font-size: 1.5rem;"></i>
+        </button>
+    </div>
+
+    <!-- Inquiry Modal -->
+    <div class="modal fade" id="inquiryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">관리자에게 문의하기</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="inquiryForm">
+                        <div class="mb-3">
+                            <label for="inquiryTitle" class="form-label">제목 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="inquiryTitle" placeholder="문의 제목을 입력하세요"
+                                maxlength="200" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="inquiryContent" class="form-label">내용 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="inquiryContent" rows="5" placeholder="문의 내용을 자세히 입력해주세요"
+                                maxlength="2000" required></textarea>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle"></i> 관리자 확인 후 답변드립니다.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="submitInquiry()">
+                        <i class="bi bi-send"></i> 문의하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function submitInquiry() {
+            const title = document.getElementById('inquiryTitle').value.trim();
+            const content = document.getElementById('inquiryContent').value.trim();
+
+            if (!title || !content) {
+                alert('제목과 내용을 모두 입력해주세요.');
+                return;
+            }
+
+            fetch('/api/inquiries', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ title, content })
+            })
+                .then(async response => {
+                    if (response.status === 401) {
+                        alert('로그인이 필요합니다.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message || '문의가 접수되었습니다.');
+
+                        // Reset form
+                        document.getElementById('inquiryTitle').value = '';
+                        document.getElementById('inquiryContent').value = '';
+
+                        // Close modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('inquiryModal'));
+                        modal.hide();
+                    } else {
+                        const data = await response.json();
+                        throw new Error(data.message || '문의 접수에 실패했습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message);
+                });
+        }
     </script>
 </body>
 

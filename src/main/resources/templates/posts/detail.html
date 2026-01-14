@@ -26,6 +26,15 @@
                             <ul class="dropdown-menu" aria-labelledby="authorActions">
                                 <li><a class="dropdown-item" id="chatLink" href="#">1:1 대화</a></li>
                                 <li><a class="dropdown-item" id="authorPostsLink" href="#">작성한 글 정보</a></li>
+                                <li sec:authorize="isAuthenticated()">
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li sec:authorize="isAuthenticated()">
+                                    <a class="dropdown-item text-warning" href="#"
+                                        onclick="showReportModal('USER', null); return false;">
+                                        <i class="bi bi-flag"></i> 사용자 신고
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                         <span class="mx-2">|</span>
@@ -38,6 +47,11 @@
                         <button id="postDeleteButton" onclick="deletePost()"
                             class="btn btn-outline-danger btn-sm">삭제</button>
                     </div>
+                    <div id="reportButton" style="display: none;" sec:authorize="isAuthenticated()">
+                        <button class="btn btn-outline-warning btn-sm" onclick="showReportModal('POST', null)">
+                            <i class="bi bi-flag"></i> 신고
+                        </button>
+                    </div>
                 </div>
 
                 <div id="imageContainer">
@@ -48,7 +62,7 @@
                 <!-- 투표 컨테이너 -->
                 <div id="pollContainer" class="mt-4"></div>
 
-                <div class="mt-4 text-center">
+                <div id="voteButtons" class="mt-4 text-center">
                     <button class="btn btn-outline-success me-2" onclick="vote('LIKE')">
                         <i class="bi bi-hand-thumbs-up"></i> 추천 <span id="likesCount">0</span>
                     </button>
@@ -160,6 +174,23 @@
                         document.getElementById('authorButtons').style.display = 'block';
                         document.getElementById('postEditButton').href = `/posts/${postId}/edit`;
                         document.getElementById('authorActionsDropdown').style.display = 'none';
+                    } else {
+                        // 로그인한 사용자이고 작성자가 아닌 경우 신고 버튼 표시
+                        // 단, 관리자 게시글이거나 공지사항인 경우 신고 불가
+                        const reportBtn = document.getElementById('reportButton');
+                        if (reportBtn && !post.authorIsAdmin && !post.isAnnouncement) {
+                            reportBtn.style.display = 'block';
+                        }
+
+                        // 관리자 작성 게시글인 경우 드롭다운 메뉴도 숨김
+                        if (post.authorIsAdmin) {
+                            document.getElementById('authorActionsDropdown').style.display = 'none';
+                        }
+                    }
+
+                    // 공지사항인 경우 추천/비추천 버튼 숨김
+                    if (post.isAnnouncement) {
+                        document.getElementById('voteButtons').style.display = 'none';
                     }
 
                     loadComments();
@@ -315,6 +346,9 @@
 
             const replyButton = `<button onclick="toggleReplyForm(${comment.id})" class="btn btn-sm btn-outline-secondary ms-1">답글</button>`;
 
+            const reportButton = !comment.isOwner ?
+                `<button onclick="showReportModal('COMMENT', ${comment.id})" class="btn btn-sm btn-outline-warning ms-1"><i class="bi bi-flag"></i> 신고</button>` : '';
+
             let html = `
                 <div class="card mb-3" id="comment-${comment.id}">
                     <div class="card-body">
@@ -329,6 +363,7 @@
                                     <div>
                                         ${replyButton}
                                         ${deleteButton}
+                                        ${reportButton}
                                     </div>
                                 </div>
                                 <p class="mb-0 text-break">${content}</p>
@@ -492,8 +527,8 @@
                         return;
                     }
                     if (response.ok) {
-                        const message = await response.text();
-                        alert(message);
+                        const data = await response.json();
+                        alert(data.message || '게시글이 삭제되었습니다.');
                         window.location.href = '/posts';
                     } else {
                         return response.json().then(data => {
@@ -506,7 +541,106 @@
                     alert(error.message);
                 });
         }
+
+        // 신고 관련 변수
+        let reportType = null;
+        let reportTargetId = null;
+
+        // 신고 모달 표시
+        function showReportModal(type, id) {
+            reportType = type;
+            reportTargetId = id || postId; // id가 null이면 현재 게시글 ID 사용
+
+            const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+            modal.show();
+        }
+
+        // 신고 제출
+        function submitReport() {
+            const reason = document.getElementById('reportReason').value.trim();
+
+            if (!reason) {
+                alert('신고 사유를 입력해주세요.');
+                return;
+            }
+
+            if (reason.length > 500) {
+                alert('신고 사유는 500자 이내로 입력해주세요.');
+                return;
+            }
+
+            let endpoint;
+            if (reportType === 'POST') {
+                endpoint = `/api/reports/post/${reportTargetId}`;
+            } else if (reportType === 'COMMENT') {
+                endpoint = `/api/reports/comment/${reportTargetId}`;
+            } else if (reportType === 'USER') {
+                endpoint = `/api/reports/user/${authorId}`; // authorId는 loadPost()에서 설정됨
+            }
+
+            fetch(endpoint, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reason })
+            })
+                .then(async response => {
+                    if (response.status === 401) {
+                        alert('로그인이 필요합니다.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    if (response.ok) {
+                        const data = await response.json();
+                        alert(data.message || '신고가 접수되었습니다. 관리자가 검토할 예정입니다.');
+
+                        // 모달 닫기
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+                        modal.hide();
+
+                        // 입력 필드 초기화
+                        document.getElementById('reportReason').value = '';
+                    } else {
+                        const data = await response.json();
+                        throw new Error(data.message || '신고 접수에 실패했습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(error.message);
+                });
+        }
     </script>
+
+    <!-- 신고 모달 -->
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">신고하기</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="reportReason" class="form-label">신고 사유 <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reportReason" rows="4"
+                            placeholder="신고 사유를 상세히 입력해주세요 (최대 500자)" maxlength="500" required></textarea>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle"></i> 신고 내용은 관리자가 검토한 후 적절한 조치를 취합니다.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-warning" onclick="submitReport()">
+                        <i class="bi bi-flag"></i> 신고하기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

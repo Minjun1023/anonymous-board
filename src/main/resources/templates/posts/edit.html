@@ -85,6 +85,24 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            // 커스텀 검증 메시지 설정
+            const titleInput = document.getElementById('title');
+            const contentInput = document.getElementById('content');
+
+            titleInput.oninvalid = function (e) {
+                e.target.setCustomValidity('제목을 입력해주세요.');
+            };
+            titleInput.oninput = function (e) {
+                e.target.setCustomValidity('');
+            };
+
+            contentInput.oninvalid = function (e) {
+                e.target.setCustomValidity('내용을 입력해주세요.');
+            };
+            contentInput.oninput = function (e) {
+                e.target.setCustomValidity('');
+            };
+
             const pathParts = window.location.pathname.split('/');
             const postId = pathParts[2]; // /posts/{id}/edit
 
@@ -176,11 +194,13 @@
                 })
                     .then(async response => {
                         if (response.ok) {
-                            const message = await response.text();
-                            alert(message);
+                            const data = await response.json();
+                            alert(data.message || '게시글이 수정되었습니다.');
                             window.location.href = `/posts/${postId}`;
                         } else {
-                            return response.text().then(text => { throw new Error(text) });
+                            return response.json().then(data => {
+                                throw new Error(data.message || '게시글 수정에 실패했습니다.')
+                            });
                         }
                     })
                     .catch(error => {
