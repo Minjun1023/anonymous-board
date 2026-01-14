@@ -41,6 +41,14 @@ public class Member {
     @Enumerated(EnumType.STRING)
     private Role role; // 사용자 권한
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isSuspended = false; // 정지 상태
+
+    private LocalDateTime suspendedUntil; // 정지 해제 시간 (null이면 영구 정지)
+
+    @Column(length = 500)
+    private String suspensionReason; // 정지 사유
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt; // 회원 생성된 시간
@@ -77,5 +85,32 @@ public class Member {
     // 새 프로필 이미지 업로드 시
     public void updateProfileImage(String profileImage) {
         this.profileImage = profileImage;
+    }
+
+    // 사용자 정지
+    public void suspend(LocalDateTime until, String reason) {
+        this.isSuspended = true;
+        this.suspendedUntil = until; // null이면 영구 정지
+        this.suspensionReason = reason;
+    }
+
+    // 정지 해제
+    public void unsuspend() {
+        this.isSuspended = false;
+        this.suspendedUntil = null;
+        this.suspensionReason = null;
+    }
+
+    // 현재 정지 상태 확인 (만료된 정지는 자동으로 해제되지 않음)
+    public boolean isCurrentlySuspended() {
+        if (!this.isSuspended) {
+            return false;
+        }
+        // 영구 정지인 경우
+        if (this.suspendedUntil == null) {
+            return true;
+        }
+        // 임시 정지인 경우 - 만료 여부 확인
+        return LocalDateTime.now().isBefore(this.suspendedUntil);
     }
 }

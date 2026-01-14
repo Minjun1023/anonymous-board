@@ -63,6 +63,23 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         Member user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("이메일 주소를 가진 사용자를 찾을 수 없습니다: " + email));
 
+        // 정지된 사용자 체크
+        if (user.isCurrentlySuspended()) {
+            String message = "계정이 정지되었습니다. 사유: " + user.getSuspensionReason();
+            if (user.getSuspendedUntil() != null) {
+                message += " / 정지 해제 예정일: " + user.getSuspendedUntil().toString();
+            } else {
+                message += " / 영구 정지된 계정입니다.";
+            }
+            // URL 인코딩하여 로그인 페이지로 리다이렉트
+            try {
+                String encodedMessage = java.net.URLEncoder.encode(message, "UTF-8");
+                return "/login?error=true&message=" + encodedMessage;
+            } catch (Exception e) {
+                return "/login?error=true&message=suspended";
+            }
+        }
+
         // 권한(Role)을 SecurityContext에 다시 세팅할 때 사용
         Authentication newAuth = new UsernamePasswordAuthenticationToken(
                 user,

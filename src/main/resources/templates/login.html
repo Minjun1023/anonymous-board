@@ -233,7 +233,12 @@
                 } else if (response.status === 401) {
                     alert('아이디 또는 비밀번호가 올바르지 않습니다.');
                 } else {
-                    alert('로그인 중 오류가 발생했습니다.');
+                    // 서버에서 보내는 에러 메시지 표시
+                    console.log('Login error status:', response.status);
+                    const errorData = await response.json().catch(() => null);
+                    console.log('Error data:', errorData);
+                    const errorMessage = errorData?.message || errorData?.error || '로그인 중 오류가 발생했습니다.';
+                    alert(errorMessage);
                 }
             } catch (error) {
                 console.error('Login failed:', error);
@@ -245,9 +250,13 @@
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
             const error = urlParams.get('error');
+            const message = urlParams.get('message');
 
             if (token) {
                 window.location.href = '/';
+            } else if (error && message) {
+                // OAuth 로그인 실패 시 서버에서 전달받은 메시지 표시
+                alert(decodeURIComponent(message));
             } else if (error) {
                 alert('로그인에 실패했습니다. 다시 시도해주세요.');
             }

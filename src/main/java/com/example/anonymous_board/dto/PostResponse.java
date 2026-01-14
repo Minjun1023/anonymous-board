@@ -32,6 +32,8 @@ public class PostResponse {
     private final String profileImage; // 게시글 작성자 프로필 이미지
     @JsonProperty("isAnnouncement")
     private final boolean isAnnouncement; // 공지사항 여부
+    @JsonProperty("authorIsAdmin")
+    private final boolean authorIsAdmin; // 작성자가 관리자인지 여부
 
     public PostResponse(Post post, Member currentUser) {
         this.id = post.getId();
@@ -46,6 +48,7 @@ public class PostResponse {
         this.commentCount = post.getCommentCount();
         this.isOwner = (currentUser != null && post.getMember().getId().equals(currentUser.getId()));
         this.isAnnouncement = post.isAnnouncement();
+        this.authorIsAdmin = post.getMember().getRole().getKey().equals("ROLE_ADMIN");
 
         String image = post.getMember().getProfileImage();
         if (image != null && !image.startsWith("/profiles/") && !image.startsWith("http")) {

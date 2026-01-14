@@ -21,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @Transactional(readOnly = true)
 public class UserService implements UserDetailsService {
@@ -134,7 +136,21 @@ public class UserService implements UserDetailsService {
         // 2. 실제 검증 (사용자 비밀번호 체크)
         Authentication authentication = authenticationManager.authenticate(authenticationToken);
 
-        // 3. 인증 정보를 기반으로 JWT 토큰 생성
+        // 3. 정지된 사용자 체크
+        Member member = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        if (member.isCurrentlySuspended()) {
+            String message = "계정이 정지되었습니다.\n사유: " + member.getSuspensionReason();
+            if (member.getSuspendedUntil() != null) {
+                message += "\n정지 해제 예정일: " + member.getSuspendedUntil().toString();
+            } else {
+                message += "\n영구 정지된 계정입니다.";
+            }
+            throw new IllegalStateException(message);
+        }
+
+        // 4. 인증 정보를 기반으로 JWT 토큰 생성
         return jwtTokenProvider.generateToken(authentication);
     }
 
@@ -220,6 +236,35 @@ public class UserService implements UserDetailsService {
 
         // 게시글과 댓글의 닉네임은 변경하지 않음
         // 각 게시글/댓글은 작성 당시의 닉네임을 유지해야 함
+    }
+
+    /**
+     * 사용자 정지
+     */
+    @Transactional
+    public void suspendUser(Long userId, Integer suspendDays, String reason) {
+        Member user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        LocalDateTime suspendUntil = null;
+        if (suspendDays != null && suspendDays > 0) {
+            suspendUntil = LocalDateTime.now().plusDays(suspendDays);
+        }
+
+        user.suspend(suspendUntil, reason);
+        userRepository.save(user);
+    }
+
+    /**
+     * 정지 해제
+     */
+    @Transactional
+    public void unsuspendUser(Long userId) {
+        Member user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        user.unsuspend();
+        userRepository.save(user);
     }
 
     /**

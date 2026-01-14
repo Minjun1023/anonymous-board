@@ -34,7 +34,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         String userNameAttributeName = userRequest.getClientRegistration().getProviderDetails()
                 .getUserInfoEndpoint().getUserNameAttributeName();
 
-        OAuthAttributes attributes = OAuthAttributes.of(registrationId, userNameAttributeName, oAuth2User.getAttributes());
+        OAuthAttributes attributes = OAuthAttributes.of(registrationId, userNameAttributeName,
+                oAuth2User.getAttributes());
 
         Member user = saveOrUpdate(attributes);
 
@@ -54,7 +55,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         }
 
         // 2. 이메일이 없거나 새로운 사용자인 경우, 닉네임과 프로바이더로 사용자 조회
-        Optional<Member> userOptional = userRepository.findByNicknameAndProvider(attributes.getName(), attributes.getProvider());
+        Optional<Member> userOptional = userRepository.findByNicknameAndProvider(attributes.getName(),
+                attributes.getProvider());
         if (userOptional.isPresent()) {
             return userOptional.get(); // 기존 사용자 반환
         }
@@ -67,10 +69,10 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
         Member newUser = Member.builder()
                 .nickname(nickname) // 닉네임
-                .email(attributes.getEmail())   // 이메일
+                .email(attributes.getEmail()) // 이메일
                 .password(UUID.randomUUID().toString()) // 비밀번호
-                .role(Role.USER)    // 비 로그인, 로그인, 관리자 구분
-                .emailVerified(true)    // 실제 검증된 이메일인지 확인 여부
+                .role(Role.USER) // 비 로그인, 로그인, 관리자 구분
+                .emailVerified(true) // 실제 검증된 이메일인지 확인 여부
                 .provider(attributes.getProvider()) // 로그인 출처 (Google, Kakao, Naver)
                 .build();
 

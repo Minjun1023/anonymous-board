@@ -48,6 +48,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 정지된 사용자 등 상태 예외 처리 (IllegalStateException)
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalStateException(IllegalStateException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    /**
      * 기타 예외 처리
      */
     @ExceptionHandler(Exception.class)

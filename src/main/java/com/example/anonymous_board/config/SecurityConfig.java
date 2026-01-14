@@ -3,6 +3,7 @@ package com.example.anonymous_board.config;
 import com.example.anonymous_board.auth.oauth.CustomOAuth2UserService;
 import com.example.anonymous_board.auth.oauth.OAuth2AuthenticationSuccessHandler;
 import com.example.anonymous_board.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
+import com.example.anonymous_board.auth.oauth.OAuth2AuthenticationFailureHandler;
 import com.example.anonymous_board.config.jwt.JwtAuthenticationFilter;
 import com.example.anonymous_board.config.jwt.JwtTokenProvider;
 import com.example.anonymous_board.repository.UserRepository;
@@ -34,6 +35,7 @@ public class SecurityConfig {
         private final UserRepository userRepository;
         private final CustomOAuth2UserService customOAuth2UserService;
         private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+        private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
         private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
         private final CustomLogoutHandler customLogoutHandler;
         private final JwtBlacklistService jwtBlacklistService;
@@ -108,7 +110,8 @@ public class SecurityConfig {
                                                                                 httpCookieOAuth2AuthorizationRequestRepository))
                                                 .userInfoEndpoint(userInfo -> userInfo
                                                                 .userService(customOAuth2UserService))
-                                                .successHandler(oAuth2AuthenticationSuccessHandler))
+                                                .successHandler(oAuth2AuthenticationSuccessHandler)
+                                                .failureHandler(oAuth2AuthenticationFailureHandler))
                                 // 로그아웃 설정
                                 .logout(logout -> logout
                                                 .logoutUrl("/logout")

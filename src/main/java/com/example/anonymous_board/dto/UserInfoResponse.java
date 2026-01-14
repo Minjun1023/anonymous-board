@@ -20,6 +20,8 @@ public class UserInfoResponse {
     private int postCount; // 게시글 수
     private int commentCount; // 댓글 수
     private LocalDateTime createdAt; // 생성 시간
+    private boolean suspended; // 정지 상태
+    private LocalDateTime suspendedUntil; // 정지 해제 예정일
 
     public static UserInfoResponse of(com.example.anonymous_board.domain.Member member) {
         return UserInfoResponse.builder()

@@ -26,9 +26,10 @@
                 <p class="card-text text-muted" th:text="${#strings.abbreviate(post.content, 100)}"></p>
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-                        <img th:src="${post.member.profileImage != null ? post.member.profileImage : '/profiles/default_profile.png'}"
+                        <img th:src="${(user.profileImage != null and user.profileImage != '') ? user.profileImage : '/profiles/default_profile.png'}"
                             alt="Profile" class="rounded-circle me-2"
-                            style="width: 24px; height: 24px; object-fit: cover;">
+                            style="width: 24px; height: 24px; object-fit: cover;"
+                            onerror="this.onerror=null; this.src='/profiles/default_profile.png';">
                         <small class="text-muted" th:text="|작성자: ${post.nickname}|"></small>
                     </div>
                     <div>

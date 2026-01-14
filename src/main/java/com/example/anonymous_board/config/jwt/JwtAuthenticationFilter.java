@@ -47,6 +47,13 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
             Member member = userRepository.findByEmail(email).orElse(null);
 
             if (member != null) {
+                // 정지된 사용자 확인
+                if (member.isCurrentlySuspended()) {
+                    log.debug("정지된 사용자: {}", member.getEmail());
+                    chain.doFilter(request, response);
+                    return;
+                }
+
                 // Role.getKey()는 이미 "ROLE_ADMIN" 형식을 반환함
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority(member.getRole().getKey());
 
