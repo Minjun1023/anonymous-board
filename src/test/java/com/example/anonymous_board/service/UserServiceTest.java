@@ -4,7 +4,6 @@ import com.example.anonymous_board.config.jwt.JwtTokenProvider;
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.domain.Role;
 import com.example.anonymous_board.repository.*;
-import com.example.anonymous_board.service.RedisEmailTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.example.anonymous_board.dto.UserSignupRequest;
 
 import java.util.Optional;
 
@@ -73,6 +73,80 @@ class UserServiceTest {
                 pollVoteRepository,
                 messageRepository,
                 userConversationRepository);
+    }
+
+    @Test
+    @DisplayName("회원가입 - 이메일 미인증 시 예외 발생 (보안 필수)")
+    void signup_EmailNotVerified_ThrowsException() {
+        // given
+        UserSignupRequest request = new UserSignupRequest();
+        request.setEmail("unverified@example.com");
+        request.setUsername("testuser");
+        request.setPassword("password");
+        request.setNickname("testnick");
+
+        when(redisEmailTokenService.isEmailVerified(request.getEmail())).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> userService.signup(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("이메일 인증이 완료되지 않았습니다");
+
+        // 회원가입 시도조차 하지 않았는지 검증
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("닉네임 변경 - 중복된 닉네임 사용 시 예외 발생 (비즈니스 로직 필수)")
+    void updateNickname_DuplicateNickname_ThrowsException() {
+        // given
+        Member currentUser = Member.builder()
+                .username("user1")
+                .email("user1@example.com")
+                .nickname("oldNick")
+                .role(Role.USER)
+                .provider("local")
+                .build();
+
+        String newNickname = "duplicateNick";
+
+        // 이미 다른 사용자가 사용 중인 닉네임
+        when(userRepository.findByNickname(newNickname)).thenReturn(Optional.of(Member.builder().build()));
+
+        // when & then
+        assertThatThrownBy(() -> userService.updateNickname(currentUser, newNickname))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("이미 사용 중인 닉네임입니다");
+
+        // DB 업데이트가 일어나지 않았는지 확인
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("비밀번호 변경 - 현재 비밀번호 불일치 시 예외 발생 (보안 필수)")
+    void changePassword_IncorrectCurrentPassword_ThrowsException() {
+        // given
+        Member user = Member.builder()
+                .username("user")
+                .email("user@example.com")
+                .password("encodedPassword")
+                .provider(null)
+                .role(Role.USER)
+                .build();
+
+        String wrongCurrentPassword = "wrongPassword";
+        String newPassword = "newPassword123";
+
+        // 현재 비밀번호 불일치
+        when(passwordEncoder.matches(wrongCurrentPassword, user.getPassword())).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> userService.changePassword(user, wrongCurrentPassword, newPassword))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("현재 비밀번호가 일치하지 않습니다");
+
+        // 비밀번호 변경 메서드가 호출되지 않았는지 확인
+        verify(passwordEncoder, never()).encode(newPassword);
     }
 
     @Test

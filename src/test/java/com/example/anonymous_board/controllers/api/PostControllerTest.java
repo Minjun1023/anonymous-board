@@ -157,4 +157,91 @@ class PostControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.content").isArray());
         }
+
+        @Test
+        @DisplayName("비추천 10개 이상인 게시글은 isBlinded가 true로 반환")
+        void getPostById_Blinded_WhenDislikesExceed10() throws Exception {
+                // given
+                Member member = createTestMember();
+                Post post = createTestPost(member);
+                post.setDislikes(12); // 비추천 12개 설정
+
+                Mockito.doNothing().when(postService).incrementViewCount(anyLong());
+                Mockito.when(postService.getPostById(1L)).thenReturn(post);
+
+                // when & then
+                mockMvc.perform(get("/api/posts/1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.dislikes").value(12))
+                                .andExpect(jsonPath("$.isBlinded").value(true)); // 블라인드 처리 확인
+        }
+
+        @Test
+        @DisplayName("비추천 10개 미만인 게시글은 isBlinded가 false로 반환")
+        void getPostById_NotBlinded_WhenDislikesBelow10() throws Exception {
+                // given
+                Member member = createTestMember();
+                Post post = createTestPost(member);
+                post.setDislikes(5); // 비추천 5개 설정
+
+                Mockito.doNothing().when(postService).incrementViewCount(anyLong());
+                Mockito.when(postService.getPostById(1L)).thenReturn(post);
+
+                // when & then
+                mockMvc.perform(get("/api/posts/1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.dislikes").value(5))
+                                .andExpect(jsonPath("$.isBlinded").value(false)); // 블라인드 안됨
+        }
+
+        @Test
+        @DisplayName("핫 게시글 - 네트 스코어 10점 이상만 포함")
+        void getHotPosts_OnlyNetScoreAbove10() throws Exception {
+                // given
+                Member member = createTestMember();
+
+                // 네트 스코어 12점 (15 - 3)
+                Post hotPost = createTestPost(member);
+                hotPost.setLikes(15);
+                hotPost.setDislikes(3);
+
+                PageImpl<Post> postPage = new PageImpl<>(
+                                Collections.singletonList(hotPost),
+                                PageRequest.of(0, 10),
+                                1);
+
+                Mockito.when(postService.getHotPosts(anyInt(), anyInt()))
+                                .thenReturn(postPage);
+
+                // when & then
+                mockMvc.perform(get("/api/posts/hot")
+                                .param("page", "0")
+                                .param("size", "10"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content").isArray())
+                                .andExpect(jsonPath("$.content[0].likes").value(15))
+                                .andExpect(jsonPath("$.content[0].dislikes").value(3));
+        }
+
+        @Test
+        @DisplayName("게시글 추천 - 비로그인 시 401 에러")
+        void votePost_Unauthorized() throws Exception {
+                // when & then (AuthenticationPrincipal이 null인 경우)
+                mockMvc.perform(post("/api/posts/1/vote")
+                                .contentType("application/json")
+                                .content("{\"voteType\": \"LIKE\"}"))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
+        }
+
+        @Test
+        @DisplayName("게시글 비추천 - 비로그인 시 401 에러")
+        void votePostDislike_Unauthorized() throws Exception {
+                // when & then
+                mockMvc.perform(post("/api/posts/1/vote")
+                                .contentType("application/json")
+                                .content("{\"voteType\": \"DISLIKE\"}"))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
+        }
 }
