@@ -33,8 +33,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     // 검색 기능 (제목 또는 내용에 키워드 포함)
     Page<Post> findByTitleContainingOrContentContaining(String titleKeyword, String contentKeyword, Pageable pageable);
 
-    // 핫 게시글 조회 (추천수 OR 비추천수 기준)
-    @Query("SELECT p FROM Post p WHERE p.likes >= :minCount OR p.dislikes >= :minCount")
+    // 핫 게시글 조회 (네트 스코어 기준: 추천수 - 비추천수, 네트 스코어 순 정렬)
+    @Query("SELECT p FROM Post p WHERE (p.likes - p.dislikes) >= :minCount ORDER BY (p.likes - p.dislikes) DESC")
     Page<Post> findHotPosts(@Param("minCount") int minCount, Pageable pageable);
 
     // 공지사항 조회 (최신순)

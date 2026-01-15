@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -67,8 +67,8 @@ public class HotPostsCacheService {
      * 캐시 갱신 (DB에서 조회 후 Redis에 저장)
      */
     public List<Long> refreshCache() {
-        // 상위 50개 핫 게시글 ID만 캐싱 (추천수 또는 비추천수 10 이상)
-        Pageable pageable = PageRequest.of(0, 50, Sort.by("likes").descending());
+        // 상위 50개 핫 게시글 ID만 캐싱 (네트 스코어 10점 이상, 정렬은 Repository에서 처리)
+        Pageable pageable = PageRequest.of(0, 50);
         Page<Post> hotPosts = postRepository.findHotPosts(10, pageable);
 
         List<Long> postIds = hotPosts.getContent().stream()

@@ -133,16 +133,66 @@
                             console.log('공지사항 게시글 발견:', post.title, 'isAnnouncement:', post.isAnnouncement);
                         }
 
+                        // 블라인드 처리 여부 확인
+                        const isBlinded = post.isBlinded || false;
+
                         // 공지사항 여부에 따른 스타일링 (더 눈에 띄게)
                         const cardClass = post.isAnnouncement
                             ? 'card mb-3 border-danger border-3 shadow-sm'
-                            : 'card mb-3';
+                            : (isBlinded ? 'card mb-3 border-warning border-2' : 'card mb-3');
                         const cardBodyClass = post.isAnnouncement
                             ? 'card-body announcement-card-body'
-                            : 'card-body';
+                            : (isBlinded ? 'card-body bg-warning bg-opacity-10' : 'card-body');
                         const announcementBadge = post.isAnnouncement
                             ? '<span class="badge bg-danger me-2" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="bi bi-megaphone-fill"></i> 공지</span>'
                             : '';
+
+                        // 블라인드된 게시글 처리
+                        if (isBlinded) {
+                            return `
+                            <div class="${cardClass}">
+                                <div class="${cardBodyClass}">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-eye-slash-fill text-warning"></i> 
+                                        <span class="text-muted">비추천이 많아 숨겨진 게시글입니다</span>
+                                    </h5>
+                                    <p class="card-text text-muted small">
+                                        이 게시글은 비추천 수가 많아 내용이 가려졌습니다. 
+                                        확인하시려면 아래 버튼을 클릭하세요.
+                                    </p>
+                                    <button class="btn btn-sm btn-outline-warning mb-2" onclick="event.preventDefault(); this.nextElementSibling.style.display='block'; this.style.display='none';">
+                                        <i class="bi bi-eye"></i> 내용 보기
+                                    </button>
+                                    <div style="display: none;">
+                                        <h5 class="card-title">
+                                            <a href="/posts/${post.id}" class="text-decoration-none">${title}</a>
+                                        </h5>
+                                        <p class="card-text text-muted">${shortContent}</p>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <div class="d-flex align-items-center">
+                                            <img src="${profileImage}" alt="Profile" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                            <small class="text-muted">작성자: ${nickname}</small>
+                                        </div>
+                                        <div>
+                                            <span class="me-3">
+                                                <i class="bi bi-hand-thumbs-up"></i> ${post.likes || 0}
+                                            </span>
+                                            <span class="me-3 text-danger">
+                                                <i class="bi bi-hand-thumbs-down"></i> ${post.dislikes || 0}
+                                            </span>
+                                            <span class="me-3">
+                                                <i class="bi bi-eye"></i> ${post.viewCount || 0}
+                                            </span>
+                                            <span class="me-3">
+                                                <i class="bi bi-chat"></i> ${post.commentCount || 0}
+                                            </span>
+                                            <small class="text-muted">${date}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }
 
                         return `
                         <div class="${cardClass}">
@@ -254,16 +304,67 @@
 
                         const profileImage = post.profileImage || '/profiles/default_profile.png';
 
+                        // 블라인드 처리 여부 확인
+                        const isBlinded = post.isBlinded || false;
+
                         // 공지사항 여부에 따른 스타일링 (더 눈에 띄게)
                         const cardClass = post.isAnnouncement
                             ? 'card mb-3 border-danger border-3 shadow-sm'
-                            : 'card mb-3';
+                            : (isBlinded ? 'card mb-3 border-warning border-2' : 'card mb-3');
                         const cardBodyStyle = post.isAnnouncement
                             ? 'background: linear-gradient(to right, #fff5f5, #ffffff); border-left: 4px solid #dc3545;'
                             : '';
+                        const cardBodyClass = isBlinded ? 'bg-warning bg-opacity-10' : '';
                         const announcementBadge = post.isAnnouncement
                             ? '<span class="badge bg-danger me-2" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="bi bi-megaphone-fill"></i> 공지</span>'
                             : '';
+
+                        // 블라인드된 게시글 처리
+                        if (isBlinded) {
+                            return `
+                            <div class="${cardClass}">
+                                <div class="card-body ${cardBodyClass}">
+                                    <h5 class="card-title">
+                                        <i class="bi bi-eye-slash-fill text-warning"></i> 
+                                        <span class="text-muted">비추천이 많아 숨겨진 게시글입니다</span>
+                                    </h5>
+                                    <p class="card-text text-muted small">
+                                        이 게시글은 비추천 수가 많아 내용이 가려졌습니다. 
+                                        확인하시려면 아래 버튼을 클릭하세요.
+                                    </p>
+                                    <button class="btn btn-sm btn-outline-warning mb-2" onclick="event.preventDefault(); this.nextElementSibling.style.display='block'; this.style.display='none';">
+                                        <i class="bi bi-eye"></i> 내용 보기
+                                    </button>
+                                    <div style="display: none;">
+                                        <h5 class="card-title">
+                                            <a href="/posts/${post.id}" class="text-decoration-none">${title}</a>
+                                        </h5>
+                                        <p class="card-text text-muted">${shortContent}</p>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <div class="d-flex align-items-center">
+                                            <img src="${profileImage}" alt="Profile" class="rounded-circle me-2" style="width: 24px; height: 24px; object-fit: cover;">
+                                            <small class="text-muted">작성자: ${nickname}</small>
+                                        </div>
+                                        <div>
+                                            <span class="me-3">
+                                                <i class="bi bi-hand-thumbs-up"></i> ${post.likes || 0}
+                                            </span>
+                                            <span class="me-3 text-danger">
+                                                <i class="bi bi-hand-thumbs-down"></i> ${post.dislikes || 0}
+                                            </span>
+                                            <span class="me-3">
+                                                <i class="bi bi-eye"></i> ${post.viewCount || 0}
+                                            </span>
+                                            <span class="me-3">
+                                                <i class="bi bi-chat"></i> ${post.commentCount || 0}
+                                            </span>
+                                            <small class="text-muted">${date}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }
 
                         return `
                         <div class="${cardClass}">

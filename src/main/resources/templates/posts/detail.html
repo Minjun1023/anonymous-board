@@ -57,6 +57,19 @@
                 <div id="imageContainer">
                     <!-- 이미지가 여기에 동적으로 추가됩니다 -->
                 </div>
+
+                <!-- 블라인드 경고 메시지 (기본 숨김) -->
+                <div id="blindedWarning" class="alert alert-warning border-warning" style="display: none;">
+                    <h5 class="alert-heading">
+                        <i class="bi bi-eye-slash-fill"></i> 비추천이 많아 숨겨진 게시글입니다
+                    </h5>
+                    <p class="mb-2">이 게시글은 비추천 수가 많아 내용이 가려졌습니다. 확인하시려면 아래 버튼을 클릭하세요.</p>
+                    <button class="btn btn-sm btn-outline-warning" onclick="revealBlindedContent()">
+                        <i class="bi bi-eye"></i> 내용 보기
+                    </button>
+                </div>
+
+                <!-- 실제 게시글 내용 -->
                 <p class="card-text mt-4" id="postContent" style="white-space: pre-wrap;"></p>
 
                 <!-- 투표 컨테이너 -->
@@ -165,6 +178,15 @@
                             img.style.objectFit = "contain";
                             imageContainer.appendChild(img);
                         });
+                    }
+
+                    // 블라인드 처리 확인
+                    const isBlinded = post.isBlinded || false;
+                    if (isBlinded) {
+                        // 내용과 이미지 숨김
+                        document.getElementById('postContent').style.display = 'none';
+                        document.getElementById('imageContainer').style.display = 'none';
+                        document.getElementById('blindedWarning').style.display = 'block';
                     }
 
                     // 투표 렌더링
@@ -611,6 +633,13 @@
                     console.error('Error:', error);
                     alert(error.message);
                 });
+        }
+
+        // 블라인드된 내용 보기 함수
+        function revealBlindedContent() {
+            document.getElementById('blindedWarning').style.display = 'none';
+            document.getElementById('postContent').style.display = 'block';
+            document.getElementById('imageContainer').style.display = 'block';
         }
     </script>
 

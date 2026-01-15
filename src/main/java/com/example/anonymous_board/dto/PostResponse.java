@@ -35,6 +35,11 @@ public class PostResponse {
     @JsonProperty("authorIsAdmin")
     private final boolean authorIsAdmin; // 작성자가 관리자인지 여부
 
+    @JsonProperty("isBlinded")
+    public boolean isBlinded() {
+        return this.dislikes >= 10;
+    }
+
     public PostResponse(Post post, Member currentUser) {
         this.id = post.getId();
         this.authorId = post.getMember().getId();
