@@ -21,10 +21,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.example.anonymous_board.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME;
 
+// OAuth2 인증 성공 핸들러
 @Component
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
@@ -45,6 +47,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // 로그인 과정 중 생성된 쿠키와 인증 속성 삭제
         clearAuthenticationAttributes(request, response);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
+    }
+
+    // 로그인 과정에서 생성된 OAuth2 관련 쿠키 삭제
+    protected void clearAuthenticationAttributes(HttpServletRequest request, HttpServletResponse response) {
+        super.clearAuthenticationAttributes(request);
+        httpCookieOAuth2AuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
     }
 
     // 로그인 완료 이후 어디로 이동할지 결정 및 JWT 토큰 발급
@@ -118,22 +126,16 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
             // Naver
         } else if (oAuth2User.getAttributes().containsKey("response")) {
             Object response = oAuth2User.getAttributes().get("response");
-            if (response instanceof java.util.Map) {
-                return (String) ((java.util.Map<?, ?>) response).get("email");
+            if (response instanceof Map) {
+                return (String) ((Map<?, ?>) response).get("email");
             }
             // Kakao
         } else if (oAuth2User.getAttributes().containsKey("kakao_account")) {
             Object kakaoAccount = oAuth2User.getAttributes().get("kakao_account");
-            if (kakaoAccount instanceof java.util.Map) {
-                return (String) ((java.util.Map<?, ?>) kakaoAccount).get("email");
+            if (kakaoAccount instanceof Map) {
+                return (String) ((Map<?, ?>) kakaoAccount).get("email");
             }
         }
         return null;
-    }
-
-    // 로그인 과정에서 생성된 OAuth2 관련 쿠키 삭제
-    protected void clearAuthenticationAttributes(HttpServletRequest request, HttpServletResponse response) {
-        super.clearAuthenticationAttributes(request);
-        httpCookieOAuth2AuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
     }
 }

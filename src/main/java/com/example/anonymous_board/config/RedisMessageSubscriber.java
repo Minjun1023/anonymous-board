@@ -25,6 +25,7 @@ public class RedisMessageSubscriber implements MessageListener {
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
+    // Redis에서 메시지를 받아 WebSocket으로 전달
     @Override
     public void onMessage(@NonNull Message message, @Nullable byte[] pattern) {
         try {

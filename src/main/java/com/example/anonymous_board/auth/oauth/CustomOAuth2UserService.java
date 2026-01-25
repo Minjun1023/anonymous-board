@@ -25,6 +25,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     private final UserRepository userRepository;
 
+    // OAuth2UserRequest를 받아 OAuth2User를 반환
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate = new DefaultOAuth2UserService();
@@ -63,6 +64,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
         // 3. 완전히 새로운 사용자일 경우, 닉네임 중복 검사 후 생성
         String nickname = attributes.getName();
+        // 소셜로그인으로 가입헀을 때, 소셜로그인 정보의 닉네임이 이미 존재하는 경우
         if (userRepository.findByNickname(nickname).isPresent()) {
             nickname = nickname + "_" + UUID.randomUUID().toString().substring(0, 4);
         }

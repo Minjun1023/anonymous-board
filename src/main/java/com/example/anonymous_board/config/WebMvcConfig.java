@@ -8,6 +8,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.nio.file.Paths;
 
 @Configuration
+// WebMvcConfigurer 인터페이스 구현
 public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override

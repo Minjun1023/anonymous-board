@@ -2,6 +2,7 @@ package com.example.anonymous_board.config.jwt;
 
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.dto.TokenInfo;
+import lombok.extern.slf4j.Slf4j;
 
 import com.example.anonymous_board.repository.UserRepository;
 import io.jsonwebtoken.*;
@@ -27,6 +28,7 @@ import java.util.Date;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 public class JwtTokenProvider {
 
     private final Key key;
@@ -142,8 +144,10 @@ public class JwtTokenProvider {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
+            // 토큰이 유효하지 않은 경우
         } catch (SecurityException | MalformedJwtException | ExpiredJwtException | UnsupportedJwtException
                 | IllegalArgumentException e) {
+            log.error("JWT 토큰 검증 실패: {}", e.getMessage());
         }
         return false;
     }

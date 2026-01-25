@@ -18,12 +18,14 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfig {
 
+    // RedisConnectionFactory 설정
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         // 기본 localhost:6379 연결
         return new LettuceConnectionFactory("localhost", 6379);
     }
 
+    // RedisTemplate 설정
     @Bean
     public RedisTemplate<String, Object> redisTemplate() {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
@@ -35,11 +37,13 @@ public class RedisConfig {
         return template;
     }
 
+    // ChannelTopic 설정
     @Bean
     public ChannelTopic chatTopic() {
         return new ChannelTopic("chat");
     }
 
+    // RedisMessageListenerContainer 설정
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
@@ -51,6 +55,7 @@ public class RedisConfig {
         return container;
     }
 
+    // MessageListenerAdapter 설정
     @Bean
     public MessageListenerAdapter messageListenerAdapter(RedisMessageSubscriber subscriber) {
         return new MessageListenerAdapter(subscriber, "onMessage");

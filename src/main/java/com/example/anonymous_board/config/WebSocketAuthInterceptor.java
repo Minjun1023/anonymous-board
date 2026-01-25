@@ -25,31 +25,38 @@ import java.util.Collections;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+// ChannelInterceptor 인터페이스 구현
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
 
+    // WebSocket 연결 전 인증 처리
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
+        // STOMP 헤더에서 인증 정보 추출
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
             // STOMP CONNECT 시 인증 처리
             String token = extractToken(accessor);
 
+            // 토큰 검증
             if (token != null && jwtTokenProvider.validateToken(token)) {
                 try {
+                    // 이메일로 사용자 조회
                     String email = jwtTokenProvider.getEmail(token);
                     Member member = userRepository.findByEmail(email).orElse(null);
 
                     if (member != null) {
+                        // 인증 객체 생성
                         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                                 member,
                                 null,
                                 Collections
                                         .singletonList(new SimpleGrantedAuthority("ROLE_" + member.getRole().name())));
 
+                        // 인증 정보 설정
                         accessor.setUser(auth);
                         log.debug("WebSocket 인증 성공: {}", member.getNickname());
                     }
