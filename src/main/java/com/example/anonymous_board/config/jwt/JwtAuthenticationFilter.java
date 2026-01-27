@@ -37,8 +37,9 @@ public class JwtAuthenticationFilter extends GenericFilterBean {
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
             // 블랙리스트 확인 (로그아웃된 토큰인지)
-            if (jwtBlacklistService.isBlacklisted(token)) {
-                log.debug("블랙리스트에 등록된 JWT 토큰");
+            boolean isBlacklisted = jwtBlacklistService.isBlacklisted(token);
+            if (isBlacklisted) {
+                log.info("JwtAuthenticationFilter: 블랙리스트에 등록된 토큰 감지! (중복 로그인/로그아웃)");
                 chain.doFilter(request, response);
                 return;
             }

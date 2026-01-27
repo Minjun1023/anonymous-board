@@ -7,19 +7,24 @@ import com.example.anonymous_board.dto.ConversationDto;
 import com.example.anonymous_board.dto.ConversationSummaryDto;
 import com.example.anonymous_board.dto.MessageCreateRequest;
 import com.example.anonymous_board.dto.MessageDto;
+import com.example.anonymous_board.dto.ReadStatusDto;
 import com.example.anonymous_board.repository.MessageRepository;
 import com.example.anonymous_board.repository.UserConversationRepository;
 import com.example.anonymous_board.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,15 +33,52 @@ public class MessageService {
         private final MessageRepository messageRepository;
         private final UserRepository userRepository;
         private final UserConversationRepository userConversationRepository;
+        private final RedisTemplate<String, Object> redisTemplate;
 
         // 대화 찾기
+        @Transactional
         public ConversationDto getConversation(Long user1Id, Long user2Id) {
+                log.info("========== getConversation 호출 ==========");
+                log.info("user1Id (요청자): {}", user1Id);
+                log.info("user2Id (상대방): {}", user2Id);
+
                 Member user1 = userRepository.findById(user1Id)
                                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
                 Member user2 = userRepository.findById(user2Id)
                                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
                 List<Message> messages = messageRepository.findConversation(user1, user2);
+                log.info("전체 메시지 개수: {}", messages.size());
+
+                // user1이 받은 메시지 중 읽지 않은 메시지 수집 및 읽음 처리
+                List<Long> readMessageIds = new ArrayList<>();
+                messages.stream()
+                                .filter(msg -> msg.getReceiver().getId().equals(user1Id))
+                                .filter(msg -> msg.getReadAt() == null)
+                                .forEach(msg -> {
+                                        msg.markAsRead();
+                                        readMessageIds.add(msg.getId());
+                                });
+
+                // 읽음 처리한 메시지가 있으면 Redis로 이벤트 발행
+                if (!readMessageIds.isEmpty()) {
+                        log.info("========== 읽음 상태 이벤트 발행 ==========");
+                        log.info("읽은 메시지 개수: {}", readMessageIds.size());
+                        log.info("메시지 ID 목록: {}", readMessageIds);
+                        log.info("발신자 ID (알림 받을 사람): {}", user2Id);
+                        log.info("수신자 ID (읽은 사람): {}", user1Id);
+
+                        ReadStatusDto readStatus = new ReadStatusDto();
+                        readStatus.setSenderId(user2Id); // 발신자에게 알림
+                        readStatus.setReceiverId(user1Id); // 읽은 사람
+                        readStatus.setMessageIds(readMessageIds);
+
+                        redisTemplate.convertAndSend("chat", readStatus);
+                        log.info("✅ Redis로 읽음 상태 발행 완료");
+                } else {
+                        log.info("읽을 메시지 없음 (모두 이미 읽음)");
+                }
+
                 List<MessageDto> messageDtos = messages.stream()
                                 .map(MessageDto::from)
                                 .collect(Collectors.toList());
@@ -151,5 +193,36 @@ public class MessageService {
                                                 userConversationRepository.save(conversation);
                                         }
                                 });
+        }
+
+        // 개별 메시지 읽음 처리
+        @Transactional
+        public void markMessageAsRead(Long messageId, Long userId) {
+                Message message = messageRepository.findById(messageId)
+                                .orElseThrow(() -> new IllegalArgumentException("메시지를 찾을 수 없습니다."));
+
+                // 수신자만 읽음 처리 가능
+                if (!message.getReceiver().getId().equals(userId)) {
+                        throw new IllegalArgumentException("수신자만 읽음 처리할 수 있습니다.");
+                }
+
+                // 이미 읽은 메시지는 처리하지 않음
+                if (message.getReadAt() != null) {
+                        log.info("이미 읽은 메시지: messageId={}", messageId);
+                        return;
+                }
+
+                // 읽음 처리
+                message.markAsRead();
+                log.info("메시지 읽음 처리: messageId={}", messageId);
+
+                // Redis로 읽음 상태 이벤트 발행
+                ReadStatusDto readStatus = new ReadStatusDto();
+                readStatus.setSenderId(message.getSender().getId()); // 발신자에게 알림
+                readStatus.setReceiverId(userId); // 읽은 사람
+                readStatus.setMessageIds(List.of(messageId));
+
+                redisTemplate.convertAndSend("chat", readStatus);
+                log.info("✅ 읽음 상태 이벤트 발행: messageId={}, senderId={}", messageId, message.getSender().getId());
         }
 }

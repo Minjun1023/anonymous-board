@@ -143,11 +143,70 @@
             background-color: #664d03;
             color: #ffda6a;
         }
+
+        /* 토스트 알림 스타일 */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .chat-toast {
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .chat-toast .toast-header {
+            background-color: #007bff;
+            color: white;
+            border-bottom: none;
+        }
+
+        .chat-toast .toast-header .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        .chat-toast .toast-body {
+            padding: 12px;
+        }
+
+        .chat-toast .toast-profile {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 8px;
+        }
+
+        [data-bs-theme="dark"] .chat-toast .toast-header {
+            background-color: #0d6efd;
+        }
+
+        [data-bs-theme="dark"] .chat-toast .toast-body {
+            background-color: #2b3035;
+            color: #f8f9fa;
+        }
+
+        /* 메시지 읽음 상태 표시 */
+        .message-status {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 2px;
+            text-align: right;
+        }
+
+        [data-bs-theme="dark"] .message-status {
+            color: rgba(255, 255, 255, 0.6);
+        }
     </style>
 </head>
 
 <body>
     <div th:replace="~{fragments/layout :: navigation}"></div>
+
+    <!-- 토스트 알림 컨테이너 -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <div class="container mt-4">
         <div class="chat-header">
@@ -191,10 +250,14 @@
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
         const messageIds = new Set(); // 중복 메시지 방지
+        let isPageVisible = true; // 페이지 가시성 추적
+        let originalTitle = document.title; // 원본 제목 저장
+        let titleBlinkInterval = null; // 제목 깜빡임 인터벌
 
         document.addEventListener('DOMContentLoaded', function () {
             loadMessages();
             connectWebSocket();
+            requestNotificationPermission(); // 알림 권한 요청
 
             const form = document.getElementById('messageForm');
             if (form) {
@@ -203,6 +266,24 @@
                     sendMessage();
                 });
             }
+
+            // 페이지 가시성 감지
+            document.addEventListener('visibilitychange', function () {
+                isPageVisible = !document.hidden;
+                if (isPageVisible) {
+                    stopTitleBlink(); // 페이지가 다시 보이면 제목 깜빡임 중지
+                }
+            });
+
+            // 페이지 포커스 감지
+            window.addEventListener('focus', function () {
+                isPageVisible = true;
+                stopTitleBlink();
+            });
+
+            window.addEventListener('blur', function () {
+                isPageVisible = false;
+            });
         });
 
         function updateConnectionStatus(status) {
@@ -246,16 +327,34 @@
                 console.log('구독 토픽:', userTopic);
 
                 stompClient.subscribe(userTopic, function (message) {
-                    console.log('메시지 수신:', message.body);
-                    const chatMessage = JSON.parse(message.body);
+                    console.log('=== WebSocket 메시지 수신 ===');
+                    const data = JSON.parse(message.body);
+                    console.log('수신 데이터:', data);
 
-                    // 현재 대화 상대의 메시지만 표시
-                    if (chatMessage.senderId === receiverId || chatMessage.receiverId === receiverId) {
-                        // 중복 메시지 방지
-                        if (!messageIds.has(chatMessage.id)) {
-                            messageIds.add(chatMessage.id);
-                            appendMessage(chatMessage);
-                            scrollToBottom();
+                    // ReadStatusDto인지 확인 (messageIds 필드가 있으면 읽음 상태)
+                    if (data.messageIds) {
+                        console.log('✅ 읽음 상태 업데이트:', data.messageIds);
+                        handleReadStatus(data);
+                    } else {
+                        // 일반 채팅 메시지
+                        const chatMessage = data;
+
+                        // 현재 대화 상대의 메시지만 표시
+                        if (chatMessage.senderId === receiverId || chatMessage.receiverId === receiverId) {
+                            // 중복 메시지 방지
+                            if (!messageIds.has(chatMessage.id)) {
+                                messageIds.add(chatMessage.id);
+                                appendMessage(chatMessage);
+                                scrollToBottom();
+
+                                // 받은 메시지인 경우
+                                if (chatMessage.senderId === receiverId) {
+                                    showNotification(chatMessage);
+
+                                    // 자동 읽음 처리 (채팅방이 열려있으므로)
+                                    markMessageAsReadAuto(chatMessage.id);
+                                }
+                            }
                         }
                     }
                 });
@@ -368,9 +467,17 @@
 
             const contentDiv = document.createElement('div');
             contentDiv.classList.add('message-content');
+
+            // 읽음 상태 표시 (내가 보낸 메시지만)
+            let statusHtml = '';
+            if (isSent && message.readAt == null) {
+                statusHtml = '<div class="message-status">1</div>';
+            }
+
             contentDiv.innerHTML = `
                 <p class="mb-0">${escapeHtml(message.content)}</p>
                 <small class="text-${isSent ? 'light' : 'muted'}">${new Date(message.createdAt).toLocaleString()}</small>
+                ${statusHtml}
             `;
 
             if (isSent) {
@@ -395,6 +502,190 @@
         function scrollToBottom() {
             const chatBox = document.getElementById('chat-box');
             chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 알림 권한 요청
+        function requestNotificationPermission() {
+            console.log('========== 알림 권한 확인 ==========');
+            console.log('Notification 지원 여부:', 'Notification' in window);
+
+            if ('Notification' in window) {
+                console.log('현재 권한 상태:', Notification.permission);
+
+                if (Notification.permission === 'default') {
+                    console.log('권한 요청 팝업 표시 중...');
+                    Notification.requestPermission().then(function (permission) {
+                        console.log('사용자 응답:', permission);
+                        if (permission === 'granted') {
+                            console.log('✅ 알림 권한 허용됨!');
+                        } else {
+                            console.log('❌ 알림 권한 거부됨');
+                        }
+                    });
+                } else if (Notification.permission === 'granted') {
+                    console.log('✅ 알림 권한 이미 허용되어 있음');
+                } else {
+                    console.log('❌ 알림이 차단되어 있습니다.');
+                    console.log('브라우저 주소창 왼쪽의 자물쇠 아이콘 > 사이트 설정 > 알림을 허용으로 변경하세요.');
+                }
+            } else {
+                console.log('❌ 이 브라우저는 알림을 지원하지 않습니다.');
+            }
+            console.log('====================================');
+        }
+
+        // 브라우저 알림 표시
+        function showNotification(chatMessage) {
+            console.log('========== 알림 표시 시도 ==========');
+            console.log('페이지 상태 - document.hidden:', document.hidden);
+            console.log('메시지:', chatMessage);
+
+            // 페이지가 백그라운드(다른 탭)일 때: 브라우저 알림
+            if (document.hidden) {
+                console.log('✅ 페이지 백그라운드 - 브라우저 알림 시도');
+
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    try {
+                        const notification = new Notification('새 메시지 도착', {
+                            body: chatMessage.content,
+                            icon: receiverProfileImage,
+                            badge: receiverProfileImage,
+                            tag: 'chat-' + chatMessage.id,
+                            requireInteraction: false
+                        });
+
+                        notification.onclick = function () {
+                            window.focus();
+                            notification.close();
+                        };
+
+                        setTimeout(() => notification.close(), 3000);
+                        console.log('✅ 브라우저 알림 표시 완료');
+                    } catch (error) {
+                        console.error('❌ 브라우저 알림 생성 실패:', error);
+                    }
+                } else {
+                    console.log('⚠️ 브라우저 알림 권한 없음 또는 미지원');
+                }
+
+                // 제목 깜빡임
+                startTitleBlink();
+            }
+            // 페이지가 보이는 상태(현재 탭): 토스트 알림
+            else {
+                console.log('✅ 페이지 보임 - 토스트 알림 표시');
+                showToast(chatMessage);
+            }
+        }
+
+        // 토스트 알림 표시
+        function showToast(chatMessage) {
+            const toastContainer = document.getElementById('toastContainer');
+
+            // 토스트 HTML 생성
+            const toastId = 'toast-' + chatMessage.id + '-' + Date.now();
+            const toastHtml = `
+                <div id="${toastId}" class="toast chat-toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        <img src="${receiverProfileImage}" class="toast-profile" alt="프로필">
+                        <strong class="me-auto">새 메시지</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${escapeHtml(chatMessage.content)}
+                    </div>
+                </div>
+            `;
+
+            // 토스트 추가
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+            // Bootstrap Toast 초기화 및 표시
+            const toastElement = document.getElementById(toastId);
+
+            // Bootstrap이 로드되어 있는지 확인
+            if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                const bsToast = new bootstrap.Toast(toastElement, {
+                    autohide: true,
+                    delay: 4000
+                });
+
+                bsToast.show();
+                console.log('✅ 토스트 알림 표시 완료 (Bootstrap)');
+            } else {
+                // Bootstrap이 없으면 수동으로 표시
+                toastElement.classList.add('show');
+                setTimeout(() => {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 150);
+                }, 4000);
+                console.log('✅ 토스트 알림 표시 완료 (수동)');
+            }
+
+            // 토스트가 숨겨진 후 DOM에서 제거
+            toastElement.addEventListener('hidden.bs.toast', function () {
+                toastElement.remove();
+            });
+        }
+
+        // 제목 깜빡임 시작
+        function startTitleBlink() {
+            if (titleBlinkInterval) return; // 이미 깜빡이고 있으면 무시
+
+            let isOriginal = true;
+            titleBlinkInterval = setInterval(function () {
+                document.title = isOriginal ? '💬 새 메시지!' : originalTitle;
+                isOriginal = !isOriginal;
+            }, 1000);
+        }
+
+        // 제목 깜빡임 중지
+        function stopTitleBlink() {
+            if (titleBlinkInterval) {
+                clearInterval(titleBlinkInterval);
+                titleBlinkInterval = null;
+                document.title = originalTitle;
+            }
+        }
+
+        // 읽음 상태 처리 함수
+        function handleReadStatus(readStatus) {
+            console.log('========== 읽음 상태 처리 ==========');
+            console.log('읽은 메시지 ID 목록:', readStatus.messageIds);
+
+            readStatus.messageIds.forEach(messageId => {
+                // DOM에서 해당 메시지의 .message-status 제거
+                const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+                if (messageDiv) {
+                    const statusDiv = messageDiv.querySelector('.message-status');
+                    if (statusDiv) {
+                        statusDiv.remove();
+                        console.log(`✅ 메시지 ${messageId}의 "1" 제거됨`);
+                    } else {
+                        console.log(`⚠️ 메시지 ${messageId}에 .message-status 없음`);
+                    }
+                } else {
+                    console.log(`⚠️ 메시지 ${messageId} DOM에서 찾을 수 없음`);
+                }
+            });
+        }
+
+        // 자동 읽음 처리 함수
+        function markMessageAsReadAuto(messageId) {
+            fetch(`/api/chats/messages/${messageId}/read`, {
+                method: 'POST',
+                credentials: 'include'
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`✅ 자동 읽음 처리 완료: messageId=${messageId}`);
+                    } else {
+                        console.error(`❌ 읽음 처리 실패: messageId=${messageId}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('읽음 처리 API 오류:', error);
+                });
         }
 
         function escapeHtml(text) {

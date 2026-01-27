@@ -16,6 +16,7 @@ public class MessageDto {
     private Long receiverId; // 수신자 ID
     private String content; // 메시지 내용
     private LocalDateTime createdAt; // 생성 시간
+    private LocalDateTime readAt; // 읽음 시간
 
     public static MessageDto from(Message message) {
         MessageDto dto = new MessageDto();
@@ -35,6 +36,7 @@ public class MessageDto {
         dto.receiverId = message.getReceiver().getId();
         dto.content = message.getContent();
         dto.createdAt = message.getCreatedAt();
+        dto.readAt = message.getReadAt(); // 읽음 시간 추가
         return dto;
     }
 }

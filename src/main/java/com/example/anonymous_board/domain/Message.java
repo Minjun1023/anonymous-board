@@ -36,4 +36,11 @@ public class Message {
     private LocalDateTime createdAt; // 생성 시간
 
     private LocalDateTime readAt; // 읽음 시간
+
+    // 메시지를 읽음으로 표시
+    public void markAsRead() {
+        if (this.readAt == null) {
+            this.readAt = LocalDateTime.now();
+        }
+    }
 }

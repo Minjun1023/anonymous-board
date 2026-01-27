@@ -17,6 +17,7 @@ public class MessageController {
 
     private final MessageService messageService;
 
+    // 대화 조회
     @GetMapping("/{receiverId}")
     public ResponseEntity<ConversationDto> getConversation(@AuthenticationPrincipal Member member,
             @PathVariable Long receiverId) {
@@ -27,6 +28,7 @@ public class MessageController {
         return ResponseEntity.ok(conversation);
     }
 
+    // 메시지 전송
     @PostMapping
     public ResponseEntity<MessageDto> sendMessage(@AuthenticationPrincipal Member member,
             @RequestBody MessageCreateRequest request) {
@@ -37,12 +39,24 @@ public class MessageController {
         return ResponseEntity.ok(messageDto);
     }
 
+    // 대화 나가기
     @PostMapping("/leave/{otherUserId}")
     public ResponseEntity<Void> leaveChat(@AuthenticationPrincipal Member member, @PathVariable Long otherUserId) {
         if (member == null) {
             return ResponseEntity.status(401).build();
         }
         messageService.leaveChat(member.getId(), otherUserId);
+        return ResponseEntity.ok().build();
+    }
+
+    // 메시지 읽음 처리
+    @PostMapping("/messages/{messageId}/read")
+    public ResponseEntity<Void> markMessageAsRead(@AuthenticationPrincipal Member member,
+            @PathVariable Long messageId) {
+        if (member == null) {
+            return ResponseEntity.status(401).build();
+        }
+        messageService.markMessageAsRead(messageId, member.getId());
         return ResponseEntity.ok().build();
     }
 }
