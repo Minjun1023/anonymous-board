@@ -38,6 +38,7 @@ public class UserService implements UserDetailsService {
     private final PollVoteRepository pollVoteRepository;
     private final MessageRepository messageRepository;
     private final UserConversationRepository userConversationRepository;
+    private final ActiveTokenService activeTokenService;
 
     // 생성자에서 @Lazy로 순환 참조 방지
     public UserService(
@@ -51,7 +52,8 @@ public class UserService implements UserDetailsService {
             VoteRepository voteRepository,
             PollVoteRepository pollVoteRepository,
             MessageRepository messageRepository,
-            UserConversationRepository userConversationRepository) {
+            UserConversationRepository userConversationRepository,
+            ActiveTokenService activeTokenService) {
         this.userRepository = userRepository;
         this.redisEmailTokenService = redisEmailTokenService;
         this.passwordEncoder = passwordEncoder;
@@ -63,6 +65,7 @@ public class UserService implements UserDetailsService {
         this.pollVoteRepository = pollVoteRepository;
         this.messageRepository = messageRepository;
         this.userConversationRepository = userConversationRepository;
+        this.activeTokenService = activeTokenService;
     }
 
     /**
@@ -151,7 +154,13 @@ public class UserService implements UserDetailsService {
         }
 
         // 4. 인증 정보를 기반으로 JWT 토큰 생성
-        return jwtTokenProvider.generateToken(authentication);
+        TokenInfo tokenInfo = jwtTokenProvider.generateToken(authentication);
+
+        // 5. 활성 토큰 저장 (기존 토큰 자동 무효화 - 중복 로그인 방지)
+        // 이메일을 키로 사용 (OAuth2와 일반 로그인 모두 동일한 키 사용)
+        activeTokenService.saveActiveToken(member.getEmail(), tokenInfo.getAccessToken());
+
+        return tokenInfo;
     }
 
     // 이메일로 사용자 이름 찾기

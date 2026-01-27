@@ -4,6 +4,7 @@ import com.example.anonymous_board.config.jwt.JwtTokenProvider;
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.dto.TokenInfo;
 import com.example.anonymous_board.repository.UserRepository;
+import com.example.anonymous_board.service.ActiveTokenService;
 import com.example.anonymous_board.util.CookieUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -34,6 +35,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final JwtTokenProvider jwtTokenProvider; // JWT 토큰 생성기
     private final UserRepository userRepository; // 사용자 정보 조회
     private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository; // 쿠키
+    private final ActiveTokenService activeTokenService; // 활성 토큰 관리
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -112,6 +114,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         jsCookie.setMaxAge(60 * 60 * 24); // 24시간
         jsCookie.setSecure(false);
         response.addCookie(jsCookie);
+
+        // 활성 토큰 저장 (기존 토큰 자동 무효화 - 중복 로그인 방지)
+        activeTokenService.saveActiveToken(user.getEmail(), tokenInfo.getAccessToken());
 
         // 리다이렉트할 URL 반환
         return UriComponentsBuilder.fromUriString(targetUrl)

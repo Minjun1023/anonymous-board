@@ -83,6 +83,42 @@
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
         <script>
+            // 쿠키 값 가져오기 헬퍼 함수
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return null;
+            }
+
+            // 전역 fetch 인터셉터 (401 에러 자동 감지)
+            const originalFetch = window.fetch;
+            window.fetch = async function (...args) {
+                const response = await originalFetch(...args);
+                if (response.status === 401) {
+                    const url = (args[0] instanceof Request) ? args[0].url : args[0];
+                    // /api/users/me는 updateNavigation에서 처리하므로 제외
+                    if (url && !url.toString().includes('/api/users/me')) {
+                        console.log('Fetch interceptor detected 401 on:', url);
+
+                        // 쿠키 삭제
+                        const cookies = ['access_token', 'jwt_token', 'refreshToken', 'JSESSIONID'];
+                        cookies.forEach(cookieName => {
+                            document.cookie = cookieName + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+                        });
+
+                        // localStorage 삭제
+                        localStorage.removeItem('jwtToken');
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('refreshToken');
+
+                        alert('다른 기기에서 로그인하여 자동으로 로그아웃되었습니다.');
+                        window.location.href = '/login';
+                    }
+                }
+                return response;
+            };
+
             // 테마 관리
             const themeToggle = document.getElementById('themeToggle');
             const themeIcon = document.getElementById('themeIcon');
@@ -113,6 +149,7 @@
 
             // 로그아웃 함수
             async function logout() {
+                console.trace('Logout function called by:'); // 호출 스택 추적
                 console.log('Logout started...');
 
                 // 즉시 네비게이션 UI 변경 (로그인 버튼 표시)
@@ -187,6 +224,39 @@
 
                         // 인증 성공 이벤트 발생
                         document.dispatchEvent(new Event('userAuthenticated'));
+                    } else if (response.status === 401) {
+                        // 401 에러 처리 (비로그인 vs 심각한 세션 만료 구분)
+
+                        // 로컬 스토리지 등에 토큰이 있는지 확인
+                        const localToken = localStorage.getItem('jwtToken');
+                        const cookieToken = getCookie('jwt_token');
+                        const hasToken = localToken || cookieToken;
+
+                        console.log('401 Check - Found Token?', !!hasToken, 'Local:', localToken, 'Cookie:', cookieToken);
+
+                        if (hasToken) {
+                            // 토큰이 있는데 401이 떴다면 => 중복 로그인 등으로 인한 세션 만료!
+                            console.log('Session invalidated (Duplicate login detected), auto-logout...');
+
+                            // 쿠키 삭제
+                            const cookies = ['access_token', 'jwt_token', 'refreshToken', 'JSESSIONID'];
+                            cookies.forEach(cookieName => {
+                                document.cookie = cookieName + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+                            });
+
+                            // localStorage 삭제
+                            localStorage.removeItem('jwtToken');
+                            localStorage.removeItem('accessToken');
+                            localStorage.removeItem('refreshToken');
+
+                            alert('다른 기기에서 로그인하여 자동으로 로그아웃되었습니다.');
+                            window.location.href = '/login';
+                        } else {
+                            // 토큰이 없어서 401이 떴다면 => 그냥 비로그인 사용자 (정상)
+                            console.log('User not authenticated (Guest)');
+                            if (authNav) authNav.style.display = 'none';
+                            if (guestNav) guestNav.style.display = 'flex';
+                        }
                     } else {
                         console.log('User not authenticated, status:', response.status);
                     }
@@ -195,14 +265,112 @@
                 }
             }
 
+            // 주기적 세션 체크 (30초마다)
+            let sessionCheckInterval = null;
+
+            function startPeriodicSessionCheck() {
+                // 이미 실행 중이면 중복 방지
+                if (sessionCheckInterval) {
+                    return;
+                }
+
+                sessionCheckInterval = setInterval(async () => {
+                    const cookieToken = getCookie('jwt_token');
+                    const localToken = localStorage.getItem('jwtToken');
+
+                    // 토큰이 있을 때만 세션 체크 (로그인 상태)
+                    if (cookieToken || localToken) {
+                        console.log('Periodic session check...');
+                        try {
+                            const response = await fetch('/api/users/me', {
+                                credentials: 'include'
+                            });
+
+                            if (response.status === 401) {
+                                console.log('Session invalidated during periodic check');
+
+                                // 쿠키 및 localStorage 삭제
+                                const cookies = ['access_token', 'jwt_token', 'refreshToken', 'JSESSIONID'];
+                                cookies.forEach(cookieName => {
+                                    document.cookie = cookieName + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+                                });
+                                localStorage.removeItem('jwtToken');
+                                localStorage.removeItem('accessToken');
+                                localStorage.removeItem('refreshToken');
+
+                                // 주기적 체크 중지
+                                if (sessionCheckInterval) {
+                                    clearInterval(sessionCheckInterval);
+                                    sessionCheckInterval = null;
+                                }
+
+                                alert('다른 기기에서 로그인하여 자동으로 로그아웃되었습니다.');
+                                window.location.href = '/login';
+                            }
+                        } catch (error) {
+                            console.error('Periodic session check error:', error);
+                        }
+                    } else {
+                        // 토큰이 없으면 체크 중지 (로그아웃 상태)
+                        if (sessionCheckInterval) {
+                            clearInterval(sessionCheckInterval);
+                            sessionCheckInterval = null;
+                        }
+                    }
+                }, 30000); // 30초마다
+            }
+
+            // 네비게이션 링크 클릭 시 세션 체크
+            async function checkSessionBeforeNavigation(event) {
+                const cookieToken = getCookie('jwt_token');
+                const localToken = localStorage.getItem('jwtToken');
+
+                // 로그인 상태일 때만 세션 체크
+                if (cookieToken || localToken) {
+                    try {
+                        const response = await fetch('/api/users/me', {
+                            credentials: 'include'
+                        });
+
+                        if (response.status === 401) {
+                            event.preventDefault(); // 페이지 이동 중지
+                            console.log('Session invalidated on nav click');
+
+                            // 쿠키 및 localStorage 삭제
+                            const cookies = ['access_token', 'jwt_token', 'refreshToken', 'JSESSIONID'];
+                            cookies.forEach(cookieName => {
+                                document.cookie = cookieName + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+                            });
+                            localStorage.removeItem('jwtToken');
+                            localStorage.removeItem('accessToken');
+                            localStorage.removeItem('refreshToken');
+
+                            alert('다른 기기에서 로그인하여 자동으로 로그아웃되었습니다.');
+                            window.location.href = '/login';
+                        }
+                    } catch (error) {
+                        console.error('Session check error on nav click:', error);
+                    }
+                }
+            }
+
             // 현재 페이지에 해당하는 네비게이션 링크 활성화
             document.addEventListener('DOMContentLoaded', function () {
                 // 네비게이션 업데이트
                 updateNavigation();
 
-                // 현재 페이지 활성화
-                const currentPath = window.location.pathname;
+                // 주기적 세션 체크 시작
+                startPeriodicSessionCheck();
+
+                // 모든 네비게이션 링크에 클릭 이벤트 추가
                 document.querySelectorAll('.nav-link').forEach(link => {
+                    // 로그아웃 링크는 제외 (이미 logout 함수 사용)
+                    if (!link.getAttribute('onclick') || !link.getAttribute('onclick').includes('logout')) {
+                        link.addEventListener('click', checkSessionBeforeNavigation);
+                    }
+
+                    // 현재 페이지 활성화
+                    const currentPath = window.location.pathname;
                     if (link.getAttribute('href') === currentPath) {
                         link.classList.add('active');
                     }
