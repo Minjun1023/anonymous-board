@@ -57,6 +57,9 @@ class UserServiceTest {
     @Mock
     private UserConversationRepository userConversationRepository;
 
+    @Mock
+    private ActiveTokenService activeTokenService;
+
     private UserService userService;
 
     @BeforeEach
@@ -72,7 +75,8 @@ class UserServiceTest {
                 voteRepository,
                 pollVoteRepository,
                 messageRepository,
-                userConversationRepository);
+                userConversationRepository,
+                activeTokenService);
     }
 
     @Test
