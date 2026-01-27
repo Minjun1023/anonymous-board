@@ -42,8 +42,4 @@ out/
 .env.development
 .env.test
 .env.production
-src/main/resources/application.yml
-.env
-server.log
-*.log
-uploads/
+src/main/resources/application-local.yml
