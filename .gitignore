@@ -48,3 +48,6 @@ src/main/resources/application-local.yml
 *.log
 server.log
 logs/
+
+### OS Files ###
+.DS_Store
