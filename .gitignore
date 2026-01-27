@@ -43,3 +43,8 @@ out/
 .env.test
 .env.production
 src/main/resources/application-local.yml
+
+### Logs ###
+*.log
+server.log
+logs/
