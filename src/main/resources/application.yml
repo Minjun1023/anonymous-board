@@ -1,4 +1,6 @@
 spring:
+  main:
+    lazy-initialization: true
   servlet:
     multipart:
       max-file-size: 20MB
@@ -25,8 +27,8 @@ spring:
       ddl-auto: update
     properties:
       hibernate:
-        format_sql: true
-        show_sql: true
+        format_sql: false
+        show_sql: false
     defer-datasource-initialization: true
   mail:
     host: smtp.gmail.com
@@ -91,9 +93,9 @@ logging:
       hibernate:
         type:
           descriptor:
-            sql: trace
+            sql: warn
       springframework:
-        security: DEBUG
+        security: WARN
 
 server:
   port: 8080
