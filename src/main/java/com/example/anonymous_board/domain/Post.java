@@ -51,6 +51,10 @@ public class Post {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean isAnnouncement = false; // 공지사항 여부 (관리자 전용)
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'FREE'")
+    private BoardType boardType = BoardType.FREE; // 게시판 타입 (자유/비밀)
+
     @ManyToOne(fetch = FetchType.LAZY) // 여러 개의 게시글이 하나의 사용자에 속함. 다대일 관계
     @JoinColumn(name = "user_id")
     private Member member; // 실제 작성자

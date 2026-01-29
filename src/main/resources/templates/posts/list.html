@@ -25,18 +25,34 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between mb-3">
             <h2>게시글 목록</h2>
-            <div id="writePostBtnContainer" style="display: none;">
-                <a href="/posts/write" class="btn btn-primary">글 작성</a>
+            <div>
+                <a href="#" id="writePostBtn" class="btn btn-primary">글 작성</a>
             </div>
         </div>
+
+        <!-- 게시판 타입 탭 -->
+        <ul class="nav nav-tabs mb-3" id="boardTabs">
+            <li class="nav-item">
+                <a class="nav-link" href="/posts?boardType=notice" data-board-type="notice">📢 공지사항</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/posts?boardType=free" data-board-type="free">🗨️ 자유게시판</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/posts?boardType=secret" data-board-type="secret">🔒 비밀게시판</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/posts?boardType=qna" data-board-type="qna">❓ QnA게시판</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/posts/hot">🔥 핫 게시판</a>
+            </li>
+        </ul>
 
         <div class="row mb-3">
             <div class="col-md-8">
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" data-sort="latest">최신순</button>
-                    <button type="button" class="btn btn-outline-secondary" data-sort="likes">추천순</button>
-                    <button type="button" class="btn btn-outline-secondary" data-sort="dislikes">비추천순</button>
-                    <button type="button" class="btn btn-outline-secondary" data-sort="viewCount">조회순</button>
+                    <button type="button" class="btn btn-outline-secondary active" data-sort="viewCount">조회순</button>
                     <button type="button" class="btn btn-outline-secondary" data-sort="comments">댓글순</button>
                 </div>
             </div>
@@ -56,11 +72,42 @@
     <div th:replace="~{fragments/layout :: footer}"></div>
 
     <script>
-        let currentSort = 'latest';
+        let currentSort = 'viewCount';  // 기본 정렬을 조회순으로 변경
+        let currentBoardType = '[[${currentBoardType}]]' || 'free';  // Thymeleaf로부터 받은 boardType, 기본값은 자유게시판
 
         document.addEventListener('DOMContentLoaded', function () {
+            // 현재 boardType에 맞는 탭 활성화
+            const activeTab = document.querySelector(`[data-board-type="${currentBoardType}"]`);
+            if (activeTab) {
+                document.querySelectorAll('#boardTabs .nav-link').forEach(link => link.classList.remove('active'));
+                activeTab.classList.add('active');
+            }
+
             loadPosts();
-            checkAuthStatus();
+
+            // 글 작성 버튼 클릭 이벤트
+            document.getElementById('writePostBtn').addEventListener('click', async function (e) {
+                e.preventDefault();
+
+                try {
+                    const response = await fetch('/api/users/me', {
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        // 로그인 상태면 글 작성 페이지로 이동
+                        window.location.href = '/posts/write';
+                    } else {
+                        // 비로그인 상태면 알림 후 로그인 페이지로 이동
+                        alert('로그인이 필요합니다.');
+                        window.location.href = '/login';
+                    }
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    alert('로그인이 필요합니다.');
+                    window.location.href = '/login';
+                }
+            });
 
             document.querySelectorAll('[data-sort]').forEach(button => {
                 button.addEventListener('click', function () {
@@ -70,34 +117,21 @@
                     loadPosts();
                 });
             });
-
-            document.addEventListener('userAuthenticated', function () {
-                document.getElementById('writePostBtnContainer').style.display = 'block';
-            });
         });
 
         async function checkAuthStatus() {
-            try {
-                const response = await fetch('/api/users/me', {
-                    credentials: 'include'
-                });
-
-                if (response.ok) {
-                    document.getElementById('writePostBtnContainer').style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Auth check failed:', error);
-            }
+            // 더 이상 필요 없음 - 버튼은 항상 표시됨
         }
 
         function loadPosts(page = 0, size = 10) {
             const params = new URLSearchParams({
                 page: page,
                 size: size,
-                sortBy: currentSort
+                sortBy: currentSort,
+                boardType: currentBoardType  // 항상 boardType 포함
             });
 
-            console.log('Loading posts - Page:', page, 'Size:', size, 'Sort:', currentSort);
+            console.log('Loading posts - Page:', page, 'Size:', size, 'Sort:', currentSort, 'BoardType:', currentBoardType);
 
             fetch('/api/posts?' + params.toString(), {
                 credentials: 'include'

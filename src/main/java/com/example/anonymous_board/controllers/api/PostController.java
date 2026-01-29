@@ -1,5 +1,6 @@
 package com.example.anonymous_board.controllers.api;
 
+import com.example.anonymous_board.domain.BoardType;
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.domain.Post;
 import com.example.anonymous_board.dto.PostCreateRequest;
@@ -49,9 +50,23 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "latest") String sortBy,
+            @RequestParam(required = false) String boardType,
             @AuthenticationPrincipal Member currentUser) {
 
-        Page<Post> postPage = postService.getAllPosts(page, size, sortBy);
+        Page<Post> postPage;
+
+        // boardType이 지정되면 해당 게시판의 글만 조회
+        if (boardType != null && !boardType.equals("all")) {
+            try {
+                BoardType type = BoardType.valueOf(boardType.toUpperCase());
+                postPage = postService.getAllPostsByBoardType(page, size, sortBy, type);
+            } catch (IllegalArgumentException e) {
+                // 잘못된 boardType인 경우 전체 조회
+                postPage = postService.getAllPosts(page, size, sortBy);
+            }
+        } else {
+            postPage = postService.getAllPosts(page, size, sortBy);
+        }
 
         List<PostResponse> posts = postPage.getContent().stream()
                 .map(post -> new PostResponse(post, currentUser))

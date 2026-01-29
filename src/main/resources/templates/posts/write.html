@@ -18,6 +18,16 @@
                 <input type="text" class="form-control" id="title" required>
             </div>
             <div class="mb-3">
+                <label for="boardType" class="form-label">게시판 선택 <span class="text-danger">*</span></label>
+                <select class="form-select" id="boardType" required>
+                    <option value="FREE">🗨️ 자유게시판</option>
+                    <option value="SECRET">🔒 비밀게시판</option>
+                    <option value="NOTICE">📢 공지게시판</option>
+                    <option value="QNA">❓ QnA게시판</option>
+                </select>
+                <div class="form-text">게시글을 작성할 게시판을 선택하세요.</div>
+            </div>
+            <div class="mb-3">
                 <label for="content" class="form-label">내용</label>
                 <textarea class="form-control" id="content" rows="10" required></textarea>
             </div>
@@ -142,7 +152,8 @@
 
             const postData = {
                 title: document.getElementById('title').value,
-                content: document.getElementById('content').value
+                content: document.getElementById('content').value,
+                boardType: document.getElementById('boardType').value
             };
 
             // 투표 데이터 추가

@@ -1,5 +1,6 @@
 package com.example.anonymous_board.service;
 
+import com.example.anonymous_board.domain.BoardType;
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.domain.Post;
 import com.example.anonymous_board.domain.PostImage;
@@ -95,6 +96,14 @@ public class PostService {
             post.setAnnouncement(true);
         }
 
+        // boardType 설정 (요청에서 받은 값을 enum으로 변환, 기본값은 FREE)
+        try {
+            BoardType boardType = BoardType.valueOf(request.getBoardType().toUpperCase());
+            post.setBoardType(boardType);
+        } catch (Exception e) {
+            post.setBoardType(BoardType.FREE); // 잘못된 값이면 기본값 FREE
+        }
+
         // 게시글 저장
         Post savedPost = postRepository.save(post);
 
@@ -152,6 +161,40 @@ public class PostService {
         }
 
         Page<Post> regularPosts = postRepository.findNonAnnouncementPosts(pageable);
+
+        // 첫 페이지에만 공지사항을 포함
+        if (page == 0 && !announcements.isEmpty()) {
+            List<Post> combinedPosts = new java.util.ArrayList<>(announcements);
+            combinedPosts.addAll(regularPosts.getContent());
+
+            // 공지사항을 포함한 총 개수 계산
+            long totalElements = announcements.size() + regularPosts.getTotalElements();
+
+            return new org.springframework.data.domain.PageImpl<>(
+                    combinedPosts,
+                    PageRequest.of(page, size),
+                    totalElements);
+        }
+
+        return regularPosts;
+    }
+
+    // 2-2. 게시판 타입별 게시글 조회 (정렬 및 페이지네이션)
+    public Page<Post> getAllPostsByBoardType(int page, int size, String sortBy, BoardType boardType) {
+        // 해당 게시판의 공지사항 조회
+        List<Post> announcements = postRepository.findAnnouncementsByBoardType(boardType);
+
+        Pageable pageable;
+
+        // 첫 페이지에서 공지사항을 포함하는 경우, 일반 게시글 사이즈 조정
+        if (page == 0 && !announcements.isEmpty()) {
+            int adjustedSize = Math.max(1, size - announcements.size());
+            pageable = createPageable(page, adjustedSize, sortBy);
+        } else {
+            pageable = createPageable(page, size, sortBy);
+        }
+
+        Page<Post> regularPosts = postRepository.findNonAnnouncementPostsByBoardType(boardType, pageable);
 
         // 첫 페이지에만 공지사항을 포함
         if (page == 0 && !announcements.isEmpty()) {

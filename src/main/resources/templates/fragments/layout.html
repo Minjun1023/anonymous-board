@@ -20,57 +20,79 @@
 
 <body>
     <header th:fragment="navigation">
-        <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
             <div class="container">
-                <a class="navbar-brand" href="/">익명 게시판</a>
+                <a class="navbar-brand fw-bold" href="/">익명 게시판</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
+                    <!-- 좌측 메뉴 -->
                     <ul class="navbar-nav me-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">홈</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/posts">게시글 목록</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/posts/hot">🔥 핫 게시판</a>
+                        <!-- 게시판 드롭다운 -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                                📝 게시판
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/posts?boardType=notice">📢 공지사항</a></li>
+                                <li><a class="dropdown-item" href="/posts?boardType=free">🗨️ 자유게시판</a></li>
+                                <li><a class="dropdown-item" href="/posts?boardType=secret">🔒 비밀게시판</a></li>
+                                <li><a class="dropdown-item" href="/posts?boardType=qna">❓ QnA게시판</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item" href="/posts/hot">🔥 핫 게시판</a></li>
+                            </ul>
                         </li>
                     </ul>
-                    <!-- 로그인 상태 네비게이션 -->
-                    <ul class="navbar-nav" id="authNav" style="display:none;">
+
+                    <!-- 우측 메뉴 -->
+                    <!-- 로그인 상태 -->
+                    <ul class="navbar-nav align-items-center" id="authNav" style="display:none;">
+                        <!-- 관리자 메뉴 -->
                         <li class="nav-item" id="adminNav" style="display:none;">
-                            <a class="nav-link" href="/admin">관리자 페이지</a>
+                            <a class="nav-link" href="/admin">⚙️ 관리자</a>
                         </li>
+
+                        <!-- 내 정보 드롭다운 -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                                👤 내 정보
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/profile">👤 프로필</a></li>
+                                <li><a class="dropdown-item" href="/my-chats">💬 내 채팅</a></li>
+                                <li><a class="dropdown-item" href="/my-inquiries">📬 내 문의</a></li>
+                            </ul>
+                        </li>
+
+                        <!-- 다크모드 토글 -->
                         <li class="nav-item">
-                            <a class="nav-link" href="/my-chats">내 채팅</a>
+                            <button id="themeToggle" class="btn btn-outline-secondary btn-sm ms-2">
+                                <i class="bi bi-moon-fill" id="themeIcon"></i>
+                            </button>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/my-inquiries">내 문의</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/profile">프로필</a>
-                        </li>
+
+                        <!-- 로그아웃 -->
                         <li class="nav-item">
                             <a class="nav-link" href="#" onclick="logout(); return false;">로그아웃</a>
                         </li>
                     </ul>
-                    <!-- 비로그인 상태 네비게이션 -->
-                    <ul class="navbar-nav" id="guestNav">
+
+                    <!-- 비로그인 상태 -->
+                    <ul class="navbar-nav align-items-center" id="guestNav">
+                        <li class="nav-item">
+                            <button id="themeToggle" class="btn btn-outline-secondary btn-sm me-2">
+                                <i class="bi bi-moon-fill" id="themeIcon"></i>
+                            </button>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/login">로그인</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/signup">회원가입</a>
-                        </li>
                     </ul>
-                    </ul>
-                    <div class="d-flex align-items-center ms-3">
-                        <button id="themeToggle" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-moon-fill" id="themeIcon"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
         </nav>
@@ -120,31 +142,41 @@
             };
 
             // 테마 관리
-            const themeToggle = document.getElementById('themeToggle');
-            const themeIcon = document.getElementById('themeIcon');
+            const themeToggles = document.querySelectorAll('#themeToggle');
+            const themeIcons = document.querySelectorAll('#themeIcon');
             const html = document.documentElement;
 
             // 저장된 테마 불러오기
             const savedTheme = localStorage.getItem('theme') || 'light';
             setTheme(savedTheme);
 
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = html.getAttribute('data-bs-theme');
-                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-                setTheme(newTheme);
+            themeToggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const currentTheme = html.getAttribute('data-bs-theme');
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                    setTheme(newTheme);
+                });
             });
 
             function setTheme(theme) {
                 html.setAttribute('data-bs-theme', theme);
                 localStorage.setItem('theme', theme);
 
-                if (theme === 'dark') {
-                    themeIcon.className = 'bi bi-sun-fill';
-                    themeToggle.classList.replace('btn-outline-secondary', 'btn-outline-light');
-                } else {
-                    themeIcon.className = 'bi bi-moon-fill';
-                    themeToggle.classList.replace('btn-outline-light', 'btn-outline-secondary');
-                }
+                themeIcons.forEach(icon => {
+                    if (theme === 'dark') {
+                        icon.className = 'bi bi-sun-fill';
+                    } else {
+                        icon.className = 'bi bi-moon-fill';
+                    }
+                });
+
+                themeToggles.forEach(toggle => {
+                    if (theme === 'dark') {
+                        toggle.classList.replace('btn-outline-secondary', 'btn-outline-light');
+                    } else {
+                        toggle.classList.replace('btn-outline-light', 'btn-outline-secondary');
+                    }
+                });
             }
 
             // 로그아웃 함수
@@ -362,10 +394,12 @@
                 // 주기적 세션 체크 시작
                 startPeriodicSessionCheck();
 
-                // 모든 네비게이션 링크에 클릭 이벤트 추가
-                document.querySelectorAll('.nav-link').forEach(link => {
-                    // 로그아웃 링크는 제외 (이미 logout 함수 사용)
-                    if (!link.getAttribute('onclick') || !link.getAttribute('onclick').includes('logout')) {
+                // 드롭다운 항목에만 세션 체크 이벤트 추가 (드롭다운 토글은 제외)
+                document.querySelectorAll('.dropdown-item, .nav-link:not(.dropdown-toggle)').forEach(link => {
+                    // 로그아웃 링크는 제외
+                    const isLogout = link.getAttribute('onclick') && link.getAttribute('onclick').includes('logout');
+
+                    if (!isLogout) {
                         link.addEventListener('click', checkSessionBeforeNavigation);
                     }
 

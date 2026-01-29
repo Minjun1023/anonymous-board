@@ -4,19 +4,36 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.example.anonymous_board.service.PostService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import com.example.anonymous_board.domain.Post;
 
 @Controller
+@RequiredArgsConstructor
 public class PageController {
+
+    private final PostService postService;
 
     // 메인 페이지
     @GetMapping("/")
-    public String home() {
+    public String home(Model model) {
+        // 핫 게시글 상위 5개 가져오기
+        Page<Post> hotPosts = postService.getHotPosts(0, 5);
+        model.addAttribute("hotPosts", hotPosts.getContent());
+
+        // 최신 게시글 상위 5개 가져오기
+        Page<Post> recentPosts = postService.getAllPosts(0, 5, "latest");
+        model.addAttribute("recentPosts", recentPosts.getContent());
+
         return "index";
     }
 
     // 게시글 목록
     @GetMapping("/posts")
-    public String showPostList() {
+    public String showPostList(@RequestParam(required = false) String boardType, Model model) {
+        // boardType 파라미터를 뷰로 전달 (탭 활성화 및 API 호출에 사용)
+        model.addAttribute("currentBoardType", boardType != null ? boardType : "free");
         return "posts/list";
     }
 

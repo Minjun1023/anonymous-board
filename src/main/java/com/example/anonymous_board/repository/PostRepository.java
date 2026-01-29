@@ -1,5 +1,6 @@
 package com.example.anonymous_board.repository;
 
+import com.example.anonymous_board.domain.BoardType;
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.domain.Post;
 
@@ -57,4 +58,13 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Modifying
     @Query("DELETE FROM Post p WHERE p.member = :member")
     void deleteByMember(@Param("member") Member member);
+
+    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType ORDER BY p.createdAt DESC")
+    Page<Post> findByBoardType(@Param("boardType") BoardType boardType, Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isAnnouncement = false ORDER BY p.createdAt DESC")
+    Page<Post> findNonAnnouncementPostsByBoardType(@Param("boardType") BoardType boardType, Pageable pageable);
+
+    @Query("SELECT p FROM Post p WHERE p.isAnnouncement = true AND p.boardType = :boardType")
+    List<Post> findAnnouncementsByBoardType(@Param("boardType") BoardType boardType);
 }
