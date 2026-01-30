@@ -19,4 +19,7 @@ public class PostUpdateRequest {
     private String content; // 게시글 내용
 
     private List<Long> deleteImageIds; // 삭제할 이미지 ID 리스트
+
+    private String pollQuestion; // 투표 질문
+    private List<String> pollOptions; // 투표 옵션 리스트
 }

@@ -99,8 +99,18 @@ public class PostService {
         // boardType 설정 (요청에서 받은 값을 enum으로 변환, 기본값은 FREE)
         try {
             BoardType boardType = BoardType.valueOf(request.getBoardType().toUpperCase());
+
+            // NOTICE 게시판은 관리자만 사용 가능
+            if (boardType == BoardType.NOTICE && !latestUser.getRole().getKey().equals("ROLE_ADMIN")) {
+                throw new IllegalArgumentException("공지게시판은 관리자만 사용할 수 있습니다.");
+            }
+
             post.setBoardType(boardType);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            // NOTICE 권한 오류는 그대로 throw
+            if (e.getMessage().contains("공지게시판")) {
+                throw e;
+            }
             post.setBoardType(BoardType.FREE); // 잘못된 값이면 기본값 FREE
         }
 
@@ -277,6 +287,21 @@ public class PostService {
                     }
                 }
             }
+        }
+
+        // 3. 투표 생성 (기존 투표가 없는 경우에만 추가 가능)
+        if (post.getPoll() == null &&
+                request.getPollQuestion() != null && !request.getPollQuestion().isBlank() &&
+                request.getPollOptions() != null && request.getPollOptions().size() >= 2) {
+
+            Poll poll = new Poll(request.getPollQuestion(), post);
+            for (String optionText : request.getPollOptions()) {
+                if (optionText != null && !optionText.isBlank()) {
+                    poll.addOption(new PollOption(optionText));
+                }
+            }
+            post.setPoll(poll);
+            postRepository.save(post); // Poll 저장을 위해 다시 저장 (Cascade)
         }
     }
 

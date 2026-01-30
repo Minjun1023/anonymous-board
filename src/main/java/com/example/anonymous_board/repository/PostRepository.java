@@ -4,8 +4,6 @@ import com.example.anonymous_board.domain.BoardType;
 import com.example.anonymous_board.domain.Member;
 import com.example.anonymous_board.domain.Post;
 
-import io.micrometer.common.lang.NonNull;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,9 +21,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     int countByMember(Member member); // 회원의 게시글 개수
 
-    // 페이지네이션을 위한 메서드
-    Page<Post> findAll(@NonNull Pageable pageable); // 게시글 전체 조회
-
+    // 회원의 닉네임 업데이트
     @Modifying
     @Query("UPDATE Post p SET p.nickname = :nickname WHERE p.member = :member")
     void updateNicknameByMember(@Param("member") Member member,

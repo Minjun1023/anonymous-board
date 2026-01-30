@@ -59,6 +59,28 @@
                 <div id="fileList" class="mt-2 text-muted small"></div>
             </div>
 
+            <!-- 투표 섹션 -->
+            <div class="mb-3 form-check" id="pollCheckboxContainer">
+                <input type="checkbox" class="form-check-input" id="usePoll" onchange="togglePoll()">
+                <label class="form-check-label" for="usePoll">투표 추가</label>
+            </div>
+            <div id="pollSection" style="display: none;" class="card p-3 mb-3">
+                <div class="mb-3">
+                    <label for="pollQuestion" class="form-label">투표 질문</label>
+                    <input type="text" class="form-control" id="pollQuestion" placeholder="질문을 입력하세요">
+                </div>
+                <div id="pollOptions">
+                    <div class="mb-2">
+                        <input type="text" class="form-control poll-option" placeholder="항목 1">
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" class="form-control poll-option" placeholder="항목 2">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addPollOption()">+ 항목
+                    추가</button>
+            </div>
+
             <div class="d-flex justify-content-end gap-2">
                 <a href="javascript:history.back()" class="btn btn-secondary">취소</a>
                 <button type="submit" class="btn btn-primary">수정완료</button>
@@ -82,6 +104,21 @@
                 fileNames.push(fileInput.files[i].name);
             }
             fileList.textContent = '선택된 파일: ' + fileNames.join(', ');
+        }
+
+        function togglePoll() {
+            const pollSection = document.getElementById('pollSection');
+            const usePoll = document.getElementById('usePoll');
+            pollSection.style.display = usePoll.checked ? 'block' : 'none';
+        }
+
+        function addPollOption() {
+            const container = document.getElementById('pollOptions');
+            const count = container.children.length + 1;
+            const div = document.createElement('div');
+            div.className = 'mb-2';
+            div.innerHTML = `<input type="text" class="form-control poll-option" placeholder="항목 ${count}">`;
+            container.appendChild(div);
         }
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -158,6 +195,15 @@
                     } else {
                         existingImagesContainer.innerHTML = '<p class="text-muted small">첨부된 이미지가 없습니다.</p>';
                     }
+
+                    // 기존 투표 확인 - 투표가 이미 있으면 투표 추가 불가
+                    if (post.poll) {
+                        const pollCheckbox = document.getElementById('usePoll');
+                        const pollLabel = document.querySelector('label[for="usePoll"]');
+                        pollCheckbox.disabled = true;
+                        pollCheckbox.checked = false;
+                        pollLabel.innerHTML = '투표 추가 <span class="text-muted small">(이미 투표가 존재합니다)</span>';
+                    }
                 })
                 .catch(error => {
                     alert(error.message);
@@ -171,11 +217,35 @@
                 const deleteImageIds = Array.from(document.querySelectorAll('.delete-image-checkbox:checked'))
                     .map(cb => parseInt(cb.value));
 
+                // 투표 데이터 검증 및 추가
+                const usePoll = document.getElementById('usePoll');
+                let pollData = {};
+
+                if (usePoll.checked) {
+                    const question = document.getElementById('pollQuestion').value;
+                    const options = Array.from(document.querySelectorAll('.poll-option'))
+                        .map(input => input.value)
+                        .filter(val => val.trim() !== '');
+
+                    if (!question) {
+                        alert('투표 질문을 입력해주세요.');
+                        return;
+                    }
+                    if (options.length < 2) {
+                        alert('투표 항목은 최소 2개 이상 입력해야 합니다.');
+                        return;
+                    }
+
+                    pollData.pollQuestion = question;
+                    pollData.pollOptions = options;
+                }
+
                 const formData = new FormData();
                 const postData = {
                     title: document.getElementById('title').value,
                     content: document.getElementById('content').value,
-                    deleteImageIds: deleteImageIds
+                    deleteImageIds: deleteImageIds,
+                    ...pollData
                 };
 
                 formData.append('post', new Blob([JSON.stringify(postData)], { type: 'application/json' }));

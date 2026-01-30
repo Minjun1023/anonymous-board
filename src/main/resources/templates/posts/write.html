@@ -22,7 +22,6 @@
                 <select class="form-select" id="boardType" required>
                     <option value="FREE">🗨️ 자유게시판</option>
                     <option value="SECRET">🔒 비밀게시판</option>
-                    <option value="NOTICE">📢 공지게시판</option>
                     <option value="QNA">❓ QnA게시판</option>
                 </select>
                 <div class="form-text">게시글을 작성할 게시판을 선택하세요.</div>
@@ -30,6 +29,14 @@
             <div class="mb-3">
                 <label for="content" class="form-label">내용</label>
                 <textarea class="form-control" id="content" rows="10" required></textarea>
+                <div class="form-text text-muted">
+                    <small>
+                        ⚠️ <strong>유의사항:</strong>
+                        타인을 비방하거나 명예를 훼손하는 내용,
+                        불법적이거나 부적절한 내용은 작성하지 말아주세요.
+                        건전한 커뮤니티 문화 만들기에 함께해 주세요.
+                    </small>
+                </div>
             </div>
             <div class="mb-3">
                 <label for="file" class="form-label">이미지 첨부 (Ctrl/Cmd + 클릭으로 여러 장 선택 가능)</label>
@@ -59,13 +66,7 @@
                     추가</button>
             </div>
 
-            <!-- 관리자 전용 공지사항 체크박스 -->
-            <div id="announcementCheckbox" class="mb-3 form-check" style="display: none;">
-                <input type="checkbox" class="form-check-input" id="isAnnouncement">
-                <label class="form-check-label" for="isAnnouncement">
-                    <strong class="text-danger">공지사항으로 등록</strong> (관리자 전용)
-                </label>
-            </div>
+
 
             <div class="d-flex justify-content-between">
                 <button type="button" class="btn btn-secondary" onclick="history.back()">취소</button>
@@ -135,9 +136,16 @@
 
                 if (response.ok) {
                     const user = await response.json();
-                    // 관리자인 경우 공지사항 체크박스 표시
+                    // 관리자인 경우 공지사항 체크박스와 공지사항 옵션 추가
                     if (user.role === 'ROLE_ADMIN') {
-                        document.getElementById('announcementCheckbox').style.display = 'block';
+
+
+                        // 공지사항 옵션 동적 추가 (제일 위에 추가)
+                        const boardSelect = document.getElementById('boardType');
+                        const noticeOption = document.createElement('option');
+                        noticeOption.value = 'NOTICE';
+                        noticeOption.text = '📢 공지사항';
+                        boardSelect.add(noticeOption, 0);
                     }
                 }
             } catch (error) {
@@ -177,9 +185,8 @@
                 postData.pollOptions = options;
             }
 
-            // 공지사항 데이터 추가 (관리자만)
-            const isAnnouncementCheckbox = document.getElementById('isAnnouncement');
-            if (isAnnouncementCheckbox && isAnnouncementCheckbox.checked) {
+            // 공지사항 자동 설정 (게시판 타입이 공지사항인 경우)
+            if (postData.boardType === 'NOTICE') {
                 postData.isAnnouncement = true;
             }
 

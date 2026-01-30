@@ -11,7 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class HotPostsCacheService {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final PostRepository postRepository;
     private final ObjectMapper objectMapper;
 
@@ -44,12 +44,11 @@ public class HotPostsCacheService {
     public List<Long> getHotPostIds() {
         try {
             // 캐시에서 조회
-            Object cached = redisTemplate.opsForValue().get(HOT_POSTS_KEY);
+            String cached = redisTemplate.opsForValue().get(HOT_POSTS_KEY);
 
             if (cached != null) {
                 log.debug("핫 게시글 캐시 히트");
-                String json = cached.toString();
-                return objectMapper.readValue(json, new TypeReference<List<Long>>() {
+                return objectMapper.readValue(cached, new TypeReference<List<Long>>() {
                 });
             }
 

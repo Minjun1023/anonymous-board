@@ -40,8 +40,14 @@ public class PostController {
         if (user == null) {
             return ResponseEntity.status(401).body(singletonMap("message", "로그인이 필요합니다."));
         }
-        postService.createPost(request, files, user);
-        return ResponseEntity.ok(singletonMap("message", "게시글이 성공적으로 작성되었습니다."));
+        try {
+            postService.createPost(request, files, user);
+            return ResponseEntity.ok(singletonMap("message", "게시글이 성공적으로 작성되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body(singletonMap("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(singletonMap("message", "서버 오류가 발생했습니다: " + e.getMessage()));
+        }
     }
 
     // 2. 게시글 전체 조회 API (페이지네이션 및 정렬)
