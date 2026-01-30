@@ -16,8 +16,17 @@
 <br>
 
 - **로그인 & 회원가입**
-<img src="images/login.png" width="400"> <img src="images/signup.png" width="400">
-<br>
+<table>
+  <tr>
+    <td align="center"><b>로그인</b></td>
+    <td align="center"><b>회원가입</b></td>
+  </tr>
+  <tr>
+    <td><img src="images/login.png" width="400"></td>
+    <td><img src="images/signup.png" width="400"></td>
+  </tr>
+</table>
+
 
 - **관리자 대시보드**
 <img src="images/admin_dashboard.png" width="800">
