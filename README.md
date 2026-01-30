@@ -11,10 +11,6 @@
 <img src="images/main.png" width="800">
 <br>
 
-- **게시글 목록 페이지**
-<img src="images/post_list.png" width="800">
-<br>
-
 - **로그인 & 회원가입**
 <table>
   <tr>
@@ -26,7 +22,15 @@
     <td><img src="images/signup.png" width="400"></td>
   </tr>
 </table>
+<br>
 
+- **게시글 목록 페이지**
+<img src="images/post_list.png" width="800">
+<br>
+
+- **게시글 작성 페이지**
+<img src="images/wrtie.png" width="800">
+<br>
 
 - **관리자 페이지**
 <img src="images/admin_dashboard.png" width="800">
