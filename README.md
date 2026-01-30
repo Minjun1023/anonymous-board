@@ -28,7 +28,7 @@
 </table>
 
 
-- **관리자 대시보드**
+- **관리자 페이지**
 <img src="images/admin_dashboard.png" width="800">
 <br><br>
 
