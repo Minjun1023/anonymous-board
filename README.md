@@ -3,7 +3,7 @@
 익명으로 자유롭게 소통하는 커뮤니티 플랫폼 🗨️
 <br><br>
 
-[프로젝트 GitHub 💻](https://github.com/Minjun1023/anonymous-board)
+[프로젝트 GitHub](https://github.com/Minjun1023/anonymous-board)
 
 ## 프로젝트 미리보기
 
