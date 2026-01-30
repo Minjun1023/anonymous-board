@@ -28,9 +28,13 @@
 <img src="images/post_list.png" width="800">
 <br>
 
+
+
 - **게시글 작성 페이지**
-<img src="images/wrtie.png" width="800">
+<img src="images/write.png" width="800">
 <br>
+
+
 
 - **관리자 페이지**
 <img src="images/admin_dashboard.png" width="800">
